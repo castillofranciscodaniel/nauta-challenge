@@ -1,9 +1,8 @@
-package com.challenge.nauta_challenge.core.service
+package com.challenge.nauta_challenge.infrastructure.security
 
 import com.challenge.nauta_challenge.core.repository.UserRepository
 import kotlinx.coroutines.runBlocking
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -15,13 +14,16 @@ class CustomUserDetailsService(
 ) : UserDetailsService {
 
     override fun loadUserByUsername(email: String): UserDetails {
-        val usuario = runBlocking { userRepository.findByEmail(email)
-            ?: throw UsernameNotFoundException("Usuario no encontrado con el email: $email") }
+        val usuario = runBlocking {
+            userRepository.findByEmail(email)
+                ?: throw UsernameNotFoundException("Usuario no encontrado con el email: $email")
+        }
 
-        return User
-            .withUsername(email)
-            .password(usuario.password)
-            .authorities(SimpleGrantedAuthority("ROLE_USER"))
-            .build()
+        return CustomUserDetails(
+            id = usuario.id!!,
+            userName = usuario.email,
+            pass = usuario.password,
+            auths = listOf(SimpleGrantedAuthority("ROLE_USER"))
+        )
     }
 }

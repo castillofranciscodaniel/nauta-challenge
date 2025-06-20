@@ -28,7 +28,7 @@ class AuthService(
         )
 
         val savedUsuario = userRepository.save(usuario)
-        val token = jwtTokenProvider.generateToken(savedUsuario.email)
+        val token = jwtTokenProvider.generateToken(savedUsuario.email, savedUsuario.id!!)
 
         return AuthResponseDto(
             token = token,
@@ -44,7 +44,7 @@ class AuthService(
             throw BadCredentialsException("Email o contraseña incorrectos")
         }
 
-        val token = jwtTokenProvider.generateToken(usuario.email)
+        val token = jwtTokenProvider.generateToken(usuario.email, usuario.id!!)
 
         return AuthResponseDto(
             token = token,
