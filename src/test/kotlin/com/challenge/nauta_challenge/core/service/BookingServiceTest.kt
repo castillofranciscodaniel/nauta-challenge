@@ -33,7 +33,7 @@ class BookingServiceTest() {
     @Test
     fun `saveBooking ok when nothing exist`() {
         // When
-        val userLoggged = AssetUtilsTestObject.getUser()
+        val userLogged = AssetUtilsTestObject.getUser()
         val bookingNumber = "123456"
         val booking = AssetUtilsTestObject.getBookingWithoutId()
 
@@ -49,9 +49,9 @@ class BookingServiceTest() {
         val order_2 = AssetUtilsTestObject.getOrder_2()
 
 
-        coEvery { userLoggedService.getCurrentUserId() }.returns(userLoggged)
+        coEvery { userLoggedService.getCurrentUserId() }.returns(userLogged)
 
-        coEvery { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userLoggged.id!!) }
+        coEvery { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userLogged.id!!) }
             .returns(null)
 
         coEvery { bookingRepository.save(booking) }.returns(booking.copy(id = 1))
@@ -75,6 +75,7 @@ class BookingServiceTest() {
         }
 
         // Then
+        assertEquals(1, bookingSaved.userId)
         assertEquals(1, bookingSaved.id)
 
         assertEquals(1, bookingSaved.containers.get(0).id)
