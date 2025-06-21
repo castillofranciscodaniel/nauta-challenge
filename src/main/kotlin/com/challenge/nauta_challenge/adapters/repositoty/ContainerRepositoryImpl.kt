@@ -12,9 +12,15 @@ import org.springframework.stereotype.Component
 class ContainerRepositoryImpl(
     private val containerDao: ContainerDao
 ) : ContainerRepository {
+
     override suspend fun save(container: Container): Container {
         val containerEntity = ContainerEntity.fromModel(container)
         return containerDao.save(containerEntity).awaitSingleOrNull()?.toModel()
             ?: throw Exception("Container not saved")
+    }
+
+    override suspend fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Container? {
+        return containerDao.findByContainerNumberAndBookingId(containerNumber, bookingId)
+            .awaitSingleOrNull()?.toModel()
     }
 }

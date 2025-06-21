@@ -17,24 +17,52 @@ class BookingService(
 ) {
 
     suspend fun saveBooking(booking: Booking): Booking {
-        // Obtener userId del usuario autenticado
-        val userLogged = userLoggedService.getCurrentUserId()
+        val userId = userLoggedService.getCurrentUserId().id!!
 
+        // Verificar o crear booking
+        val bookingToSave = booking.copy(userId = userId)
         val bookingSaved = bookingRepository.findByBookingNumberAndUserId(
-            booking.bookingNumber, userLogged.id!!
-        ) ?: bookingRepository.save(booking)
+            booking.bookingNumber, userId
+        ) ?: bookingRepository.save(bookingToSave)
 
-        val containersSaved = booking.containers.map { containerRepository.save(it) }
-
-        val ordersSaved = booking.orders.map { order ->
-            val orderSaved = orderRepository.save(order)
-            val invoicesSaved = order.invoices.map {
-                val invoiceWithOrderId = it.copy(orderId = orderSaved.id)
-                invoiceRepository.save(invoiceWithOrderId)
-            }
-            orderSaved.copy(invoices = invoicesSaved)
+        // Guardar contenedores si no existen ya
+        val containersSaved = booking.containers.map { container ->
+            val existing = containerRepository.findByContainerNumberAndBookingId(
+                container.containerNumber, bookingSaved.id!!)
+            existing ?: containerRepository.save(container.copy(bookingId = bookingSaved.id))
         }
 
+        // Guardar órdenes si no existen ya
+        val ordersSaved = booking.orders.map { order ->
+            val existingOrder = orderRepository.findByPurchaseNumberAndBookingId(order.purchaseNumber, bookingSaved.id!!)
+            val orderToUse = existingOrder ?: orderRepository.save(order.copy(bookingId = bookingSaved.id))
+
+            // Guardar invoices si no existen
+            val invoicesSaved = order.invoices.map { invoice ->
+                invoiceRepository.save(invoice.copy(orderId = orderToUse.id))
+            }
+
+            orderToUse.copy(invoices = invoicesSaved)
+        }
+
+        // Aplicar reglas de asociación orden ↔ contenedor
+        if (ordersSaved.size == 1 && containersSaved.isNotEmpty()) {
+            val order = ordersSaved.first()
+            containersSaved.forEach { container ->
+                if (!orderContainerRepository.existsByOrderIdAndContainerId(order.id!!, container.id!!)) {
+                    orderContainerRepository.save(order.id, container.id)
+                }
+            }
+        } else if (containersSaved.size == 1 && ordersSaved.isNotEmpty()) {
+            val container = containersSaved.first()
+            ordersSaved.forEach { order ->
+                if (!orderContainerRepository.existsByOrderIdAndContainerId(order.id!!, container.id!!)) {
+                    orderContainerRepository.save(order.id, container.id)
+                }
+            }
+        } else {
+            println("Relación ambigua en booking ${booking.bookingNumber}. No se crean asociaciones automáticas.")
+        }
 
         return bookingSaved.copy(containers = containersSaved, orders = ordersSaved)
     }

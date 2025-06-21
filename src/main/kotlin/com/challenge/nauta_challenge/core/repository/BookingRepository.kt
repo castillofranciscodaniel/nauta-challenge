@@ -12,10 +12,12 @@ interface BookingRepository {
 
 interface ContainerRepository {
     suspend fun save(container: Container): Container
+    suspend fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Container?
 }
 
 interface OrderRepository {
     suspend fun save(order: Order): Order
+    suspend fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Order?
 }
 
 interface InvoiceRepository {

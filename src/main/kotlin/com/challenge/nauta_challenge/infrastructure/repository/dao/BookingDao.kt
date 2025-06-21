@@ -1,10 +1,6 @@
 package com.challenge.nauta_challenge.infrastructure.repository.dao
 
-import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
-import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEntity
-import com.challenge.nauta_challenge.infrastructure.repository.model.InvoiceEntity
-import com.challenge.nauta_challenge.infrastructure.repository.model.OrderEntity
-import org.springframework.data.annotation.Id
+import com.challenge.nauta_challenge.infrastructure.repository.model.*
 import org.springframework.data.r2dbc.repository.R2dbcRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
@@ -19,14 +15,22 @@ interface BookingDao : R2dbcRepository<BookingEntity, Long> {
 @Repository
 interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
     fun findByContainerNumber(containerNumber: String): Mono<ContainerEntity>
+    fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Mono<ContainerEntity>
 }
 
 @Repository
-interface OrderDao: R2dbcRepository<OrderEntity, Long> {
+interface OrderDao : R2dbcRepository<OrderEntity, Long> {
     fun findByPurchaseNumber(purchaseNumber: String): Mono<OrderEntity>
+    fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Flux<OrderEntity>
 }
 
 @Repository
-interface InvoiceDao: R2dbcRepository<InvoiceEntity, Long> {
+interface InvoiceDao : R2dbcRepository<InvoiceEntity, Long> {
     fun findByInvoiceNumber(invoiceNumber: String): Mono<InvoiceEntity>
+}
+
+@Repository
+interface OrderContainerDao : R2dbcRepository<OrderContainerEntity, Long> {
+    fun findByOrderId(orderId: Long): Flux<OrderContainerEntity>
+    fun findByContainerId(containerId: Long): Flux<OrderContainerEntity>
 }
