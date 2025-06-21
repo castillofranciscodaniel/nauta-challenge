@@ -7,7 +7,7 @@ import com.challenge.nauta_challenge.core.model.Order
 
 interface BookingRepository {
     suspend fun save(booking: Booking): Booking
-    suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking
+    suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking?
 }
 
 interface ContainerRepository {

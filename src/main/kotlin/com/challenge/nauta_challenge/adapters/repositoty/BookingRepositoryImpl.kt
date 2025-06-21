@@ -1,6 +1,5 @@
 package com.challenge.nauta_challenge.adapters.repositoty
 
-import com.challenge.nauta_challenge.core.exception.NotFoundException
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
@@ -18,7 +17,7 @@ class BookingRepositoryImpl(
             ?: throw Exception("Booking not saved")
     }
 
-    override suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking =
+    override suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking? =
         bookingDao.findByBookingNumberAndUserId(bookingNumber, userId)
-            .awaitSingleOrNull()?.toModel() ?: throw NotFoundException("Booking not found")
+            .awaitSingleOrNull()?.toModel()
 }

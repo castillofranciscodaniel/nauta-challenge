@@ -22,7 +22,7 @@ class CustomUserDetailsService(
         return CustomUserDetails(
             id = usuario.id!!,
             userName = usuario.email,
-            pass = usuario.password,
+            pass = usuario.password!!,
             auths = listOf(SimpleGrantedAuthority("ROLE_USER"))
         )
     }
