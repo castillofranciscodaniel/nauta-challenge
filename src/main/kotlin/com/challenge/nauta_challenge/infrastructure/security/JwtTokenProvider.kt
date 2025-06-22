@@ -45,4 +45,17 @@ class JwtTokenProvider {
             .body
             .subject
     }
+
+    fun getClaimFromToken(token: String, claimName: String): Any? {
+        return try {
+            Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .body
+                .get(claimName)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

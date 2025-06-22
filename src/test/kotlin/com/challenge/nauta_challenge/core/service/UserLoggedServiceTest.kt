@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.core.service
 
 import com.challenge.nauta_challenge.core.exception.UnauthorizedException
+import com.challenge.nauta_challenge.core.model.User
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -10,9 +11,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.core.Authentication
-import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
+import reactor.core.publisher.Mono
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -25,8 +27,8 @@ class UserLoggedServiceTest {
 
     @BeforeEach
     fun setup() {
-        mockkStatic(SecurityContextHolder::class)
-        every { SecurityContextHolder.getContext() } returns securityContext
+        mockkStatic(ReactiveSecurityContextHolder::class)
+        every { ReactiveSecurityContextHolder.getContext() } returns Mono.just(securityContext)
     }
 
     @AfterEach
@@ -39,15 +41,14 @@ class UserLoggedServiceTest {
         // Arrange
         val userId = 1L
         val userEmail = "test@example.com"
-        val customUserDetails = CustomUserDetails(
+        val user = User(
             userId,
             userEmail,
-            "password",
-            listOf(SimpleGrantedAuthority("ROLE_USER"))
+            "password"
         )
 
         every { securityContext.authentication } returns authentication
-        every { authentication.principal } returns customUserDetails
+        every { authentication.principal } returns user
 
         // Act
         val resultado = userLoggedService.getCurrentUserId()

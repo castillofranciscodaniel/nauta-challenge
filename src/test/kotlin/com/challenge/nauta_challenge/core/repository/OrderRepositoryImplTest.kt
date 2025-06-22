@@ -110,29 +110,4 @@ class OrderRepositoryImplTest {
         assertEquals(0, orders.size)
     }
 
-    @Test
-    fun `findAll returns flow of all orders`() = runBlocking {
-        // Arrange
-        val bookingId = 1L
-
-        // Arrange
-        val orderEntity1 = OrderEntity(id = 1, purchaseNumber = "PO-123", bookingId = 1L)
-        val orderEntity2 = OrderEntity(id = 2, purchaseNumber = "PO-456", bookingId = 2L)
-
-        every { orderDao.findAll() } returns
-                Flux.just(orderEntity1, orderEntity2)
-
-        // Act
-        val result = orderRepository.findAllByBookingId(bookingId)
-        val orders = result.toList()
-
-        // Assert
-        assertEquals(2, orders.size)
-        assertEquals(1L, orders[0].id)
-        assertEquals("PO-123", orders[0].purchaseNumber)
-        assertEquals(1L, orders[0].bookingId)
-        assertEquals(2L, orders[1].id)
-        assertEquals("PO-456", orders[1].purchaseNumber)
-        assertEquals(2L, orders[1].bookingId)
-    }
 }

@@ -13,12 +13,6 @@ class UserLoggedService() {
         val authentication = ReactiveSecurityContextHolder.getContext().awaitFirstOrNull()?.authentication
             ?: throw UnauthorizedException("Usuario no autenticado")
 
-        val userLogged = (authentication.principal as CustomUserDetails)
-
-        return User(
-            id = userLogged.id,
-            email = userLogged.userName
-        )
-
+        return (authentication.principal as User)
     }
 }

@@ -26,9 +26,13 @@ class JwtAuthenticationFilter(
             val token = extractToken(exchange.request)
             if (token != null && jwtService.validateToken(token)) {
                 val mail = jwtService.getUserEmailFromToken(token)
+
+                // Obtener el ID del usuario desde el claim 'userId' del token
+                val userId = extractUserIdFromToken(token)
+
                 val auth = UsernamePasswordAuthenticationToken(
                     User(
-                        id = 1,
+                        id = userId,
                         email = mail
                     ),
                     null,
@@ -42,9 +46,20 @@ class JwtAuthenticationFilter(
 
         return filter
     }
+
     private fun extractToken(request: ServerHttpRequest): String? {
         return request.headers.getFirst("Authorization")
             ?.takeIf { it.startsWith("Bearer ") }
             ?.removePrefix("Bearer ")
+    }
+
+    private fun extractUserIdFromToken(token: String): Long {
+        return jwtService.getClaimFromToken(token, "userId")?.let { claim ->
+            when (claim) {
+                is Number -> claim.toLong()
+                is String -> claim.toLongOrNull() ?: throw IllegalArgumentException("Invalid userId in token")
+                else -> throw IllegalArgumentException("Invalid userId type in token")
+            }
+        } ?: throw IllegalArgumentException("userId not found in token")
     }
 }
