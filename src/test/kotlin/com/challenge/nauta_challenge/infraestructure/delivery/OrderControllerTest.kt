@@ -45,4 +45,20 @@ class OrderControllerTest {
         assertEquals(order1.id, resultList[0].id)
         assertEquals(order2.id, resultList[1].id)
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `getAllOrders should return empty flow when no orders exist`() = runTest {
+        // Given
+        val emptyOrdersFlow: Flow<Order> = flowOf()
+
+        `when`(orderService.findAllOrdersForCurrentUser()).thenReturn(emptyOrdersFlow)
+
+        // When
+        val result = orderController.getAllOrders()
+
+        // Then
+        val resultList = result.toList()
+        assertEquals(0, resultList.size, "Should return empty list when no orders exist")
+    }
 }
