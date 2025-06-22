@@ -3,30 +3,23 @@ package com.challenge.nauta_challenge.infraestructure.delivery
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.service.OrderService
 import com.challenge.nauta_challenge.infrastructure.delivery.OrderController
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.test.context.junit.jupiter.SpringExtension
+import org.springframework.boot.test.context.SpringBootTest
 import kotlin.test.assertEquals
 
-@ExtendWith(MockitoExtension::class, SpringExtension::class)
+@SpringBootTest
 class OrderControllerTest {
 
-    @Mock
-    private lateinit var orderService: OrderService
+    private var orderService = mockk<OrderService>()
 
-    @InjectMocks
-    private lateinit var orderController: OrderController
+    private var orderController = OrderController(orderService)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `getAllOrders should return flow of orders from service`() = runTest {
         // Given
@@ -34,7 +27,7 @@ class OrderControllerTest {
         val order2 = Order(id = 2L, purchaseNumber = "PO-002", bookingId = 100L, invoices = listOf())
         val ordersFlow: Flow<Order> = flowOf(order1, order2)
 
-        `when`(orderService.findAllOrdersForCurrentUser()).thenReturn(ordersFlow)
+        coEvery { orderService.findAllOrdersForCurrentUser() }.returns(ordersFlow)
 
         // When
         val result = orderController.getAllOrders()
@@ -46,13 +39,12 @@ class OrderControllerTest {
         assertEquals(order2.id, resultList[1].id)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `getAllOrders should return empty flow when no orders exist`() = runTest {
         // Given
         val emptyOrdersFlow: Flow<Order> = flowOf()
 
-        `when`(orderService.findAllOrdersForCurrentUser()).thenReturn(emptyOrdersFlow)
+        coEvery { orderService.findAllOrdersForCurrentUser() }.returns(emptyOrdersFlow)
 
         // When
         val result = orderController.getAllOrders()
