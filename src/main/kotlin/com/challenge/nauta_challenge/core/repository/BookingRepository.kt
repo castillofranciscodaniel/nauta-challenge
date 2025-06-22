@@ -4,6 +4,7 @@ import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.model.Order
+import com.challenge.nauta_challenge.core.model.OrderContainer
 
 interface BookingRepository {
     suspend fun save(booking: Booking): Booking
@@ -22,4 +23,9 @@ interface OrderRepository {
 
 interface InvoiceRepository {
     suspend fun save(invoice: Invoice): Invoice
+}
+
+interface OrderContainerRepository {
+    suspend fun save(orderId: Long, containerId: Long): OrderContainer
+    suspend fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Boolean
 }

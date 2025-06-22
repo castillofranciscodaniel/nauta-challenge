@@ -27,7 +27,7 @@ data class Invoice(
     val orderId: Long? = null
 )
 
-data class OrderContainerEntity(
+data class OrderContainer(
     val id: Long? = null,
     val orderId: Long,
     val containerId: Long

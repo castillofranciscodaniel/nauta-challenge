@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge.infrastructure.repository.model
 
+import com.challenge.nauta_challenge.core.model.OrderContainer
 import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
@@ -16,14 +17,14 @@ data class OrderContainerEntity(
     val containerId: Long
 ) {
     companion object {
-        fun fromModel(model: OrderContainerEntity) = OrderContainerEntity(
+        fun fromModel(model: OrderContainer) = OrderContainerEntity(
             id = model.id,
             orderId = model.orderId,
             containerId = model.containerId
         )
     }
 
-    fun toModel() = OrderContainerEntity(
+    fun toModel() = OrderContainer(
         id = this.id,
         orderId = this.orderId,
         containerId = this.containerId

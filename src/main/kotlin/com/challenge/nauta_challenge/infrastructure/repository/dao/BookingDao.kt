@@ -21,7 +21,7 @@ interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
 @Repository
 interface OrderDao : R2dbcRepository<OrderEntity, Long> {
     fun findByPurchaseNumber(purchaseNumber: String): Mono<OrderEntity>
-    fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Flux<OrderEntity>
+    fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Mono<OrderEntity>
 }
 
 @Repository
@@ -31,6 +31,6 @@ interface InvoiceDao : R2dbcRepository<InvoiceEntity, Long> {
 
 @Repository
 interface OrderContainerDao : R2dbcRepository<OrderContainerEntity, Long> {
-    fun findByOrderId(orderId: Long): Flux<OrderContainerEntity>
-    fun findByContainerId(containerId: Long): Flux<OrderContainerEntity>
+    fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Mono<Boolean>
+    fun findByOrderIdAndContainerId(orderId: Long, containerId: Long): Mono<OrderContainerEntity>
 }
