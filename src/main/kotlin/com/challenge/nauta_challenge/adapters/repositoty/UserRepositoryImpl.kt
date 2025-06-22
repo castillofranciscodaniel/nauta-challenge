@@ -12,10 +12,10 @@ class UserRepositoryImpl(
     private val userDao: UserDao
 ) : UserRepository {
 
-    override suspend fun findByEmail(email: String): User =
+    override suspend fun findByEmail(email: String): User? =
         userDao.findByEmail(email)
             .map { userEntity -> userEntity.toModel() }
-            .awaitSingleOrNull() ?: throw NoSuchElementException("User not found with email: $email")
+            .awaitSingleOrNull()
 
 
     override suspend fun existsByEmail(email: String): Boolean =
@@ -23,7 +23,7 @@ class UserRepositoryImpl(
             .awaitSingleOrNull() ?: false
 
     override suspend fun save(user: User): User {
-        val userEntity = userDao.save(UserEntity.fromModel(user) )
+        val userEntity = userDao.save(UserEntity.fromModel(user))
             .awaitSingleOrNull() ?: throw IllegalStateException("Failed to save user")
 
         return userEntity.toModel()
