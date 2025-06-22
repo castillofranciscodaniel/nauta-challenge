@@ -1,43 +1,50 @@
 package com.challenge.nauta_challenge.infrastructure.security
 
-import jakarta.servlet.FilterChain
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import com.challenge.nauta_challenge.core.model.User
+import org.springframework.http.server.reactive.ServerHttpRequest
+import org.springframework.security.authentication.ReactiveAuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter
 import org.springframework.stereotype.Component
-import org.springframework.web.filter.OncePerRequestFilter
+import reactor.core.publisher.Mono
 
 @Component
 class JwtAuthenticationFilter(
-    private val jwtTokenProvider: JwtTokenProvider,
-    private val userDetailsService: UserDetailsService
-) : OncePerRequestFilter() {
-    
-    override fun doFilterInternal(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        filterChain: FilterChain
-    ) {
-        val token = getJwtFromRequest(request)
-        
-        if (!token.isNullOrBlank() && jwtTokenProvider.validateToken(token)) {
-            val userEmail = jwtTokenProvider.getUserEmailFromToken(token)
-            val userDetails = userDetailsService.loadUserByUsername(userEmail)
-            val authentication = UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.authorities
-            )
-            SecurityContextHolder.getContext().authentication = authentication
+    private val jwtService: JwtTokenProvider
+) {
+
+    fun apply(): AuthenticationWebFilter {
+        val authManager = ReactiveAuthenticationManager { auth ->
+            // Este auth ya viene validado por el filtro
+            Mono.just(auth)
         }
-        
-        filterChain.doFilter(request, response)
+
+        val filter = AuthenticationWebFilter(authManager)
+
+        filter.setServerAuthenticationConverter { exchange ->
+            val token = extractToken(exchange.request)
+            if (token != null && jwtService.validateToken(token)) {
+                val mail = jwtService.getUserEmailFromToken(token)
+                val auth = UsernamePasswordAuthenticationToken(
+                    User(
+                        id = 1,
+                        email = mail
+                    ),
+                    null,
+                    listOf(SimpleGrantedAuthority("ROLE_USER"))
+                )
+                Mono.just(auth)
+            } else {
+                Mono.empty()
+            }
+        }
+
+        return filter
     }
-    
-    private fun getJwtFromRequest(request: HttpServletRequest): String? {
-        val bearerToken = request.getHeader("Authorization")
-        return if (!bearerToken.isNullOrBlank() && bearerToken.startsWith("Bearer ")) {
-            bearerToken.substring(7)
-        } else null
+    private fun extractToken(request: ServerHttpRequest): String? {
+        return request.headers.getFirst("Authorization")
+            ?.takeIf { it.startsWith("Bearer ") }
+            ?.removePrefix("Bearer ")
     }
 }

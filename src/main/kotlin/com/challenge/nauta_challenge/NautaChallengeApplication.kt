@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge
 
+import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
@@ -7,5 +8,7 @@ import org.springframework.boot.runApplication
 class NautaChallengeApplication
 
 fun main(args: Array<String>) {
-	runApplication<NautaChallengeApplication>(*args)
+	runApplication<NautaChallengeApplication>(*args) {
+		webApplicationType = WebApplicationType.REACTIVE // opcional, por seguridad
+	}
 }

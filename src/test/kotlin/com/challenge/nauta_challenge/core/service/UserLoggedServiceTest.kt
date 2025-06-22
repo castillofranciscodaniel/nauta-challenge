@@ -1,7 +1,6 @@
 package com.challenge.nauta_challenge.core.service
 
 import com.challenge.nauta_challenge.core.exception.UnauthorizedException
-import com.challenge.nauta_challenge.infrastructure.security.CustomUserDetails
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
