@@ -4,6 +4,8 @@ import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.stereotype.Component
 
@@ -20,4 +22,10 @@ class BookingRepositoryImpl(
     override suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking? =
         bookingDao.findByBookingNumberAndUserId(bookingNumber, userId)
             .awaitSingleOrNull()?.toModel()
+
+    override fun findAllByUserId(userId: Long): Flow<Booking> {
+        return bookingDao.findAllByUserId(userId)
+            .map { it.toModel() }
+            .asFlow()
+    }
 }

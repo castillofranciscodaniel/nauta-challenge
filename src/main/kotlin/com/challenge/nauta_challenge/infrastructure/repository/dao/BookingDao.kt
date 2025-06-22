@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono
 interface BookingDao : R2dbcRepository<BookingEntity, Long> {
     fun findByUserId(usuarioId: Long): Flux<BookingEntity>
     fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Mono<BookingEntity>
+    fun findAllByUserId(userId: Long): Flux<BookingEntity>
 }
 
 @Repository
@@ -22,11 +23,13 @@ interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
 interface OrderDao : R2dbcRepository<OrderEntity, Long> {
     fun findByPurchaseNumber(purchaseNumber: String): Mono<OrderEntity>
     fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Mono<OrderEntity>
+    fun findAllByBookingId(bookingId: Long): Flux<OrderEntity>
 }
 
 @Repository
 interface InvoiceDao : R2dbcRepository<InvoiceEntity, Long> {
     fun findByInvoiceNumber(invoiceNumber: String): Mono<InvoiceEntity>
+    fun findAllByOrderId(orderId: Long): Flux<InvoiceEntity>
 }
 
 @Repository
