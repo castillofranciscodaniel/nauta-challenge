@@ -194,45 +194,60 @@ class OrderServiceTest {
 
     @Test
     fun `findAllOrdersForCurrentUser should return orders with invoices`(): Unit = runTest {
+        // Arrange
+        val userId = 1L
+        val user = User(id = userId, email = "test@gmail.com")
 
-        val user = User(id = 1, email = "test@gmail.com")
+        val order1 = Order(id = 201L, purchaseNumber = "PO-001", bookingId = 101L)
+        val order2 = Order(id = 202L, purchaseNumber = "PO-002", bookingId = 102L)
+        val invoice1 = Invoice(id = 301L, invoiceNumber = "INV-001", orderId = order1.id!!)
+        val invoice2 = Invoice(id = 302L, invoiceNumber = "INV-002", orderId = order2.id!!)
 
-        // No crear una nueva instancia, usar la existente
         coEvery { userLoggedService.getCurrentUserId() } returns user
-
-        val booking1 = mockk<Booking>()
-        val booking2 = mockk<Booking>()
-        val order1 = mockk<Order>()
-        val order2 = mockk<Order>()
-        val invoice1 = mockk<Invoice>()
-        val invoice2 = mockk<Invoice>()
-
-        coEvery { booking1.id } returns 101L
-        coEvery { booking2.id } returns 102L
-        coEvery { order1.id } returns 201L
-        coEvery { order2.id } returns 202L
-
-        coEvery { bookingRepository.findAllByUserId(user.id!!) } returns flowOf(booking1, booking2)
-        coEvery { orderRepository.findAllByBookingId(101L) } returns flowOf(order1)
-        coEvery { orderRepository.findAllByBookingId(102L) } returns flowOf(order2)
-
-        coEvery { invoiceService.findAllByOrderId(201L) } returns flowOf(invoice1)
-        coEvery { invoiceService.findAllByOrderId(202L) } returns flowOf(invoice2)
-
-        coEvery { order1.copy(invoices = any()) } returns order1
-        coEvery { order2.copy(invoices = any()) } returns order2
+        coEvery { orderRepository.findAllByUserId(userId) } returns flowOf(order1, order2)
+        coEvery { invoiceService.findAllByOrderId(order1.id!!) } returns flowOf(invoice1)
+        coEvery { invoiceService.findAllByOrderId(order2.id!!) } returns flowOf(invoice2)
 
         // Act
         val result = orderService.findAllOrdersForCurrentUser().toList()
 
         // Assert
         assertEquals(2, result.size)
+        assertEquals(order1.id, result[0].id)
+        assertEquals(order1.purchaseNumber, result[0].purchaseNumber)
+        assertEquals(1, result[0].invoices.size)
+        assertEquals(invoice1.id, result[0].invoices[0].id)
+
+        assertEquals(order2.id, result[1].id)
+        assertEquals(order2.purchaseNumber, result[1].purchaseNumber)
+        assertEquals(1, result[1].invoices.size)
+        assertEquals(invoice2.id, result[1].invoices[0].id)
+
+        // Verify
         coVerify { userLoggedService.getCurrentUserId() }
-        coVerify { bookingRepository.findAllByUserId(user.id!!) }
-        coVerify { orderRepository.findAllByBookingId(101L) }
-        coVerify { orderRepository.findAllByBookingId(102L) }
-        coVerify { invoiceService.findAllByOrderId(201L) }
-        coVerify { invoiceService.findAllByOrderId(202L) }
+        coVerify { orderRepository.findAllByUserId(userId) }
+        coVerify { invoiceService.findAllByOrderId(order1.id!!) }
+        coVerify { invoiceService.findAllByOrderId(order2.id!!) }
+    }
+
+    @Test
+    fun `findAllOrdersForCurrentUser should return empty list when user has no orders`(): Unit = runTest {
+        // Arrange
+        val userId = 1L
+        val user = User(id = userId, email = "test@gmail.com")
+
+        coEvery { userLoggedService.getCurrentUserId() } returns user
+        coEvery { orderRepository.findAllByUserId(userId) } returns flowOf()
+
+        // Act
+        val result = orderService.findAllOrdersForCurrentUser().toList()
+
+        // Assert
+        assertEquals(0, result.size)
+
+        // Verify
+        coVerify { userLoggedService.getCurrentUserId() }
+        coVerify { orderRepository.findAllByUserId(userId) }
     }
 
     @Test

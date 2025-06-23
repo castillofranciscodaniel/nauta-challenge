@@ -37,15 +37,10 @@ class OrderService(
     suspend fun findAllOrdersForCurrentUser(): Flow<Order> {
         val currentUser = userLoggedService.getCurrentUserId()
 
-        // Obtenemos todos los bookings del usuario
-        return bookingRepository.findAllByUserId(currentUser.id!!)
-            .flatMapMerge { booking ->
-                // Para cad booking, obtenemos sus órdenes
-                orderRepository.findAllByBookingId(booking.id!!)
-            }
+        // Obtenemos todas las órdenes del usuario con una sola consulta
+        return orderRepository.findAllByUserId(currentUser.id!!)
             .map { order ->
-                // Para cada orden, si tiene ID, obtenemos sus facturas
-                // Obtenemos las facturas como Flow
+                // Para cada orden, cargar sus facturas asociadas
                 val invoices = invoiceService.findAllByOrderId(order.id!!).toList()
                 order.copy(invoices = invoices)
             }

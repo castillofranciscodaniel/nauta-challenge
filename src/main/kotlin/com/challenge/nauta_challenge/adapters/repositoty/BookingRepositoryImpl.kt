@@ -22,10 +22,4 @@ class BookingRepositoryImpl(
     override suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking? =
         bookingDao.findByBookingNumberAndUserId(bookingNumber, userId)
             .awaitSingleOrNull()?.toModel()
-
-    override fun findAllByUserId(userId: Long): Flow<Booking> {
-        return bookingDao.findAllByUserId(userId)
-            .map { it.toModel() }
-            .asFlow()
-    }
 }

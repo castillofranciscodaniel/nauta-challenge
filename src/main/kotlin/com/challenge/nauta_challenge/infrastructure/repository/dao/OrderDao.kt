@@ -24,4 +24,14 @@ interface OrderDao : R2dbcRepository<OrderEntity, Long> {
     """
     )
     fun findOrdersByContainerIdAndUserId(containerId: String, userId: Long): Flux<OrderEntity>
+
+    @Query(
+        """
+        SELECT o.* 
+        FROM orders o
+        INNER JOIN bookings b ON o.booking_id = b.id
+        WHERE b.user_id = :userId
+        """
+    )
+    fun findAllByUserId(userId: Long): Flux<OrderEntity>
 }

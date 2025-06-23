@@ -10,5 +10,4 @@ import reactor.core.publisher.Mono
 interface OrderContainerDao : R2dbcRepository<OrderContainerEntity, Long> {
     fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Mono<Boolean>
     fun findAllByOrderId(orderId: Long): Flux<OrderContainerEntity>
-    fun findAllByContainerId(containerId: Long): Flux<OrderContainerEntity>
 }

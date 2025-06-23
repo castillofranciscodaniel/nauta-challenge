@@ -1,14 +1,11 @@
 package com.challenge.nauta_challenge.core.service
 
-import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.model.Container
-import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.model.Invoice
+import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.model.User
-import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.core.repository.ContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
-import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -24,16 +21,12 @@ class ContainerServiceTest {
 
     private val containerRepository = mockk<ContainerRepository>()
     private val userLoggedService = mockk<UserLoggedService>()
-    private val bookingRepository = mockk<BookingRepository>()
     private val orderRepository = mockk<OrderRepository>()
-    private val orderContainerRepository = mockk<OrderContainerRepository>()
     private val invoiceService = mockk<InvoiceService>()
     private val containerService = ContainerService(
         containerRepository,
         userLoggedService,
-        bookingRepository,
         orderRepository,
-        orderContainerRepository,
         invoiceService
     )
 
@@ -55,7 +48,12 @@ class ContainerServiceTest {
             )
         )
 
-        coEvery { containerRepository.findByContainerNumberAndBookingId(containerNumber, bookingId) } returns existingContainer
+        coEvery {
+            containerRepository.findByContainerNumberAndBookingId(
+                containerNumber,
+                bookingId
+            )
+        } returns existingContainer
 
         // Act
         val result = containerService.saveContainersForBooking(containers, bookingId)
@@ -103,16 +101,21 @@ class ContainerServiceTest {
         val bookingId = 1L
         val containerNumber1 = "CONT12345"
         val containerNumber2 = "CONT67890"
-        
+
         val container1 = Container(id = null, containerNumber = containerNumber1, bookingId = null)
         val container2 = Container(id = null, containerNumber = containerNumber2, bookingId = null)
-        
+
         val existingContainer = Container(id = 1L, containerNumber = containerNumber1, bookingId = bookingId)
         val savedContainer = Container(id = 2L, containerNumber = containerNumber2, bookingId = bookingId)
-        
+
         val containers = listOf(container1, container2)
 
-        coEvery { containerRepository.findByContainerNumberAndBookingId(containerNumber1, bookingId) } returns existingContainer
+        coEvery {
+            containerRepository.findByContainerNumberAndBookingId(
+                containerNumber1,
+                bookingId
+            )
+        } returns existingContainer
         coEvery { containerRepository.findByContainerNumberAndBookingId(containerNumber2, bookingId) } returns null
         coEvery { containerRepository.save(container2.copy(bookingId = bookingId)) } returns savedContainer
 
@@ -133,17 +136,12 @@ class ContainerServiceTest {
         val userId = 100L
         val currentUser = User(id = userId, email = "user@example.com", password = "password")
 
-        val booking1 = Booking(id = 1L, bookingNumber = "BOOK-001", userId = userId)
-        val booking2 = Booking(id = 2L, bookingNumber = "BOOK-002", userId = userId)
-
-        val container1 = Container(id = 1L, containerNumber = "CONT-001", bookingId = booking1.id!!)
-        val container2 = Container(id = 2L, containerNumber = "CONT-002", bookingId = booking1.id!!)
-        val container3 = Container(id = 3L, containerNumber = "CONT-003", bookingId = booking2.id!!)
+        val container1 = Container(id = 1L, containerNumber = "CONT-001", bookingId = 1L)
+        val container2 = Container(id = 2L, containerNumber = "CONT-002", bookingId = 1L)
+        val container3 = Container(id = 3L, containerNumber = "CONT-003", bookingId = 2L)
 
         coEvery { userLoggedService.getCurrentUserId() } returns currentUser
-        every { bookingRepository.findAllByUserId(userId) } returns flowOf(booking1, booking2)
-        every { containerRepository.findAllByBookingId(booking1.id!!) } returns flowOf(container1, container2)
-        every { containerRepository.findAllByBookingId(booking2.id!!) } returns flowOf(container3)
+        every { containerRepository.findAllByUserId(userId) } returns flowOf(container1, container2, container3)
 
         // Act
         val result = containerService.findAllContainersForCurrentUser().toList()
@@ -159,31 +157,13 @@ class ContainerServiceTest {
     }
 
     @Test
-    fun `findAllContainersForCurrentUser returns empty flow when user has no bookings`() = runBlocking {
+    fun `findAllContainersForCurrentUser returns empty flow when user has no containers`() = runBlocking {
         // Arrange
         val userId = 100L
         val currentUser = User(id = userId, email = "user@example.com", password = "password")
 
         coEvery { userLoggedService.getCurrentUserId() } returns currentUser
-        every { bookingRepository.findAllByUserId(userId) } returns flowOf()
-
-        // Act
-        val result = containerService.findAllContainersForCurrentUser().toList()
-
-        // Then
-        assertEquals(0, result.size)
-    }
-
-    @Test
-    fun `findAllContainersForCurrentUser returns empty flow when bookings have no containers`() = runBlocking {
-        // Arrange
-        val userId = 100L
-        val currentUser = User(id = userId, email = "user@example.com", password = "password")
-        val booking = Booking(id = 1L, bookingNumber = "BOOK-001", userId = userId)
-
-        coEvery { userLoggedService.getCurrentUserId() } returns currentUser
-        every { bookingRepository.findAllByUserId(userId) } returns flowOf(booking)
-        every { containerRepository.findAllByBookingId(booking.id!!) } returns flowOf()
+        every { containerRepository.findAllByUserId(userId) } returns flowOf()
 
         // Act
         val result = containerService.findAllContainersForCurrentUser().toList()

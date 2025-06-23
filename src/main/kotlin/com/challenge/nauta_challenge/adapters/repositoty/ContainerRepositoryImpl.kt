@@ -25,20 +25,14 @@ class ContainerRepositoryImpl(
             .awaitSingleOrNull()?.toModel()
     }
 
-    override fun findAllByBookingIds(bookingIds: List<Long>): Flow<Container> {
-        return containerDao.findAllByBookingIdIn(bookingIds)
-            .map { it.toModel() }
-            .asFlow()
-    }
-
-    override fun findAllByBookingId(bookingId: Long): Flow<Container> {
-        return containerDao.findAllByBookingId(bookingId)
-            .map { it.toModel() }
-            .asFlow()
-    }
-
     override fun findContainersByPurchaseNumberAndUserId(purchaseNumber: String, userId: Long): Flow<Container> {
         return containerDao.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId)
+            .map { it.toModel() }
+            .asFlow()
+    }
+
+    override fun findAllByUserId(userId: Long): Flow<Container> {
+        return containerDao.findAllByUserId(userId)
             .map { it.toModel() }
             .asFlow()
     }

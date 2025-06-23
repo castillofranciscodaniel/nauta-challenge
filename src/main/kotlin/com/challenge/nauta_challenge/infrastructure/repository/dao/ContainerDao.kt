@@ -10,8 +10,6 @@ import reactor.core.publisher.Mono
 @Repository
 interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
     fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Mono<ContainerEntity>
-    fun findAllByBookingIdIn(bookingIds: List<Long>): Flux<ContainerEntity>
-    fun findAllByBookingId(bookingId: Long): Flux<ContainerEntity>
 
     @Query("""
         SELECT c.* 
@@ -23,4 +21,12 @@ interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
         AND b.user_id = :userId
     """)
     fun findContainersByPurchaseNumberAndUserId(purchaseNumber: String, userId: Long): Flux<ContainerEntity>
+
+    @Query("""
+        SELECT c.* 
+        FROM containers c
+        INNER JOIN bookings b ON c.booking_id = b.id
+        WHERE b.user_id = :userId
+    """)
+    fun findAllByUserId(userId: Long): Flux<ContainerEntity>
 }

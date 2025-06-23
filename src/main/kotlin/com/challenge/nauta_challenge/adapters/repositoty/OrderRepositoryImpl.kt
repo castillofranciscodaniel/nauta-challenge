@@ -24,15 +24,14 @@ class OrderRepositoryImpl(
             .awaitSingleOrNull()?.toModel()
     }
 
-
-    override fun findAllByBookingId(bookingId: Long): Flow<Order> {
-        return orderDao.findAllByBookingId(bookingId)
+    override fun findOrdersByContainerIdAndUserId(containerId: String, userId: Long): Flow<Order> {
+        return orderDao.findOrdersByContainerIdAndUserId(containerId, userId)
             .map { it.toModel() }
             .asFlow()
     }
 
-    override fun findOrdersByContainerIdAndUserId(containerId: String, userId: Long): Flow<Order> {
-        return orderDao.findOrdersByContainerIdAndUserId(containerId, userId)
+    override fun findAllByUserId(userId: Long): Flow<Order> {
+        return orderDao.findAllByUserId(userId)
             .map { it.toModel() }
             .asFlow()
     }

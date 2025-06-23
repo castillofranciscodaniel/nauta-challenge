@@ -6,10 +6,8 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,43 +69,4 @@ class BookingRepositoryImplTest {
         assertNull(result)
     }
 
-    @Test
-    fun `findAllByUserId returns flow of bookings`() = runTest {
-        // Arrange
-        val userId = 1L
-        val bookingEntity1 = BookingEntity(id = 1, bookingNumber = "BK-123", userId = userId)
-        val bookingEntity2 = BookingEntity(id = 2, bookingNumber = "BK-456", userId = userId)
-
-        every { bookingDao.findAllByUserId(userId) } returns
-                Flux.just(bookingEntity1, bookingEntity2)
-
-        // Act
-        val result = bookingRepository.findAllByUserId(userId)
-        val bookings = result.toList()
-
-        // Assert
-        assertEquals(2, bookings.size)
-        assertEquals(1L, bookings[0].id)
-        assertEquals("BK-123", bookings[0].bookingNumber)
-        assertEquals(userId, bookings[0].userId)
-        assertEquals(2L, bookings[1].id)
-        assertEquals("BK-456", bookings[1].bookingNumber)
-        assertEquals(userId, bookings[1].userId)
-    }
-
-    @Test
-    fun `findAllByUserId returns empty flow when no bookings found`() = runTest {
-        // Arrange
-        val userId = 1L
-
-        every { bookingDao.findAllByUserId(userId) } returns
-                Flux.empty()
-
-        // Act
-        val result = bookingRepository.findAllByUserId(userId)
-        val bookings = result.toList()
-
-        // Assert
-        assertEquals(0, bookings.size)
-    }
 }

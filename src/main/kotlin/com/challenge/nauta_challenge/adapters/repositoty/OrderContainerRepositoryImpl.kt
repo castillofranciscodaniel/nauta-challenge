@@ -25,15 +25,4 @@ class OrderContainerRepositoryImpl(
         return orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId).awaitSingleOrNull() ?: false
     }
 
-    override fun findContainersByOrderId(orderId: Long): Flow<Long> {
-        return orderContainerDao.findAllByOrderId(orderId)
-            .map { it.containerId }
-            .asFlow()
-    }
-
-    override fun findOrdersByContainerId(containerId: Long): Flow<Long> {
-        return orderContainerDao.findAllByContainerId(containerId)
-            .map { it.orderId }
-            .asFlow()
-    }
 }
