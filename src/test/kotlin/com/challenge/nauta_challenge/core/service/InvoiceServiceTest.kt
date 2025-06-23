@@ -4,7 +4,7 @@ import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.repository.InvoiceRepository
 import io.mockk.coEvery
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import kotlin.test.assertEquals
@@ -16,7 +16,7 @@ class InvoiceServiceTest {
     private val invoiceService = InvoiceService(invoiceRepository)
 
     @Test
-    fun saveInvvoice(): Unit = runBlocking {
+    fun saveInvvoice(): Unit = runTest {
         // Arrange
         val orderId = 1L
         val invoice = Invoice(
@@ -30,10 +30,7 @@ class InvoiceServiceTest {
             orderId = orderId
         )
 
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId)
-        } returns null // La factura no existe
-
+        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId) } returns null
         coEvery { invoiceRepository.save(invoice.copy(orderId = orderId)) } returns savedInvoice
 
         // Act
@@ -47,7 +44,7 @@ class InvoiceServiceTest {
     }
 
     @Test
-    fun guardaMultiplesFacturasCorrectamente(): Unit = runBlocking {
+    fun guardaMultiplesFacturasCorrectamente(): Unit = runTest {
         // Arrange
         val orderId = 1L
         val invoice1 = Invoice(
@@ -71,15 +68,8 @@ class InvoiceServiceTest {
             orderId = orderId
         )
 
-        // Ninguna factura existe previamente
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId(invoice1.invoiceNumber, orderId)
-        } returns null
-
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId(invoice2.invoiceNumber, orderId)
-        } returns null
-
+        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice1.invoiceNumber, orderId) } returns null
+        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice2.invoiceNumber, orderId) } returns null
         coEvery { invoiceRepository.save(invoice1.copy(orderId = orderId)) } returns savedInvoice1
         coEvery { invoiceRepository.save(invoice2.copy(orderId = orderId)) } returns savedInvoice2
 
@@ -97,7 +87,7 @@ class InvoiceServiceTest {
     }
 
     @Test
-    fun manejaListaVacia(): Unit = runBlocking {
+    fun manejaListaVacia(): Unit = runTest {
         // Arrange
         val orderId = 1L
 
@@ -109,7 +99,7 @@ class InvoiceServiceTest {
     }
 
     @Test
-    fun `no guarda facturas duplicadas`(): Unit = runBlocking {
+    fun `no guarda facturas duplicadas`(): Unit = runTest {
         // Arrange
         val orderId = 1L
         val invoice = Invoice(
@@ -133,7 +123,7 @@ class InvoiceServiceTest {
     }
 
     @Test
-    fun `guarda facturas no duplicadas y omite las duplicadas`(): Unit = runBlocking {
+    fun `guarda facturas no duplicadas y omite las duplicadas`(): Unit = runTest {
         // Arrange
         val orderId = 1L
         val invoice1 = Invoice(id = null, invoiceNumber = "INV-001", orderId = null)

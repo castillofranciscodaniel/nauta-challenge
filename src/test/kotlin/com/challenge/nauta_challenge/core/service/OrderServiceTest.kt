@@ -1,17 +1,15 @@
 package com.challenge.nauta_challenge.core.service
 
-import com.challenge.nauta_challenge.core.model.Booking
-import com.challenge.nauta_challenge.core.model.Invoice
-import com.challenge.nauta_challenge.core.model.Order
-import com.challenge.nauta_challenge.core.model.User
+import com.challenge.nauta_challenge.core.model.*
 import com.challenge.nauta_challenge.core.repository.BookingRepository
+import com.challenge.nauta_challenge.core.repository.ContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import kotlin.test.assertEquals
@@ -23,15 +21,17 @@ class OrderServiceTest {
     private val invoiceService = mockk<InvoiceService>()
     private val bookingRepository = mockk<BookingRepository>()
     private val userLoggedService = mockk<UserLoggedService>()
+    private val containerRepository = mockk<ContainerRepository>()
     private val orderService = OrderService(
         orderRepository,
         invoiceService,
         bookingRepository,
-        userLoggedService
+        userLoggedService,
+        containerRepository
     )
 
     @Test
-    fun devuelveOrdenExistenteSiYaEstáAlmacenada(): Unit = runBlocking {
+    fun devuelveOrdenExistenteSiYaEstáAlmacenada(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -72,7 +72,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun guardaOrderCuandoNoExiste(): Unit = runBlocking {
+    fun guardaOrderCuandoNoExiste(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -114,7 +114,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun procesaMultiplesOrdenesCorrectamente(): Unit = runBlocking {
+    fun procesaMultiplesOrdenesCorrectamente(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber1 = "PO-123"
@@ -178,7 +178,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun manejaListaVaciaCorrectamente(): Unit = runBlocking {
+    fun manejaListaVaciaCorrectamente(): Unit = runTest {
         // Arrange
         val bookingId = 1L
 
@@ -193,18 +193,12 @@ class OrderServiceTest {
     }
 
     @Test
-    fun `findAllOrdersForCurrentUser should return orders with invoices`(): Unit = runBlocking {
-        // Arrange
-        val userId = 1L
-        val user = mockk<User>()
-        val bookingRepository = mockk<BookingRepository>()
-        val userLoggedService = mockk<UserLoggedService>()
-        val orderServiceWithBookings = OrderService(
-            orderRepository,
-            invoiceService,
-            bookingRepository,
-            userLoggedService
-        )
+    fun `findAllOrdersForCurrentUser should return orders with invoices`(): Unit = runTest {
+
+        val user = User(id = 1, email = "test@gmail.com")
+
+        // No crear una nueva instancia, usar la existente
+        coEvery { userLoggedService.getCurrentUserId() } returns user
 
         val booking1 = mockk<Booking>()
         val booking2 = mockk<Booking>()
@@ -213,15 +207,12 @@ class OrderServiceTest {
         val invoice1 = mockk<Invoice>()
         val invoice2 = mockk<Invoice>()
 
-        coEvery { user.id } returns userId
-        coEvery { userLoggedService.getCurrentUserId() } returns user
-
         coEvery { booking1.id } returns 101L
         coEvery { booking2.id } returns 102L
         coEvery { order1.id } returns 201L
         coEvery { order2.id } returns 202L
 
-        coEvery { bookingRepository.findAllByUserId(userId) } returns flowOf(booking1, booking2)
+        coEvery { bookingRepository.findAllByUserId(user.id!!) } returns flowOf(booking1, booking2)
         coEvery { orderRepository.findAllByBookingId(101L) } returns flowOf(order1)
         coEvery { orderRepository.findAllByBookingId(102L) } returns flowOf(order2)
 
@@ -232,15 +223,74 @@ class OrderServiceTest {
         coEvery { order2.copy(invoices = any()) } returns order2
 
         // Act
-        val result = orderServiceWithBookings.findAllOrdersForCurrentUser().toList()
+        val result = orderService.findAllOrdersForCurrentUser().toList()
 
         // Assert
         assertEquals(2, result.size)
         coVerify { userLoggedService.getCurrentUserId() }
-        coVerify { bookingRepository.findAllByUserId(userId) }
+        coVerify { bookingRepository.findAllByUserId(user.id!!) }
         coVerify { orderRepository.findAllByBookingId(101L) }
         coVerify { orderRepository.findAllByBookingId(102L) }
         coVerify { invoiceService.findAllByOrderId(201L) }
         coVerify { invoiceService.findAllByOrderId(202L) }
+    }
+
+    @Test
+    fun `findContainersByOrderId should return containers for authorized order`() = runTest {
+        // Arrange
+        val userId = 1L
+        val purchaseNumber = "PO-123"
+
+        val user = User(id = userId, email = "user@example.com", password = "password")
+        val bookingId = 42L
+
+        val container1 = Container(id = 101L, containerNumber = "CONT-001", bookingId = bookingId)
+        val container2 = Container(id = 102L, containerNumber = "CONT-002", bookingId = bookingId)
+
+        // Mock usuario actual
+        coEvery { userLoggedService.getCurrentUserId() } returns user
+
+        coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
+                flowOf(container1, container2)
+
+        // Act
+        val result = orderService.findContainersByOrderId(purchaseNumber).toList()
+
+        // Assert
+        assertEquals(2, result.size)
+        assertEquals(container1.id, result[0].id)
+        assertEquals(container1.containerNumber, result[0].containerNumber)
+        assertEquals(container2.id, result[1].id)
+        assertEquals(container2.containerNumber, result[1].containerNumber)
+
+        // Verify
+        coVerify(exactly = 1) { userLoggedService.getCurrentUserId() }
+        coVerify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
+    }
+
+
+    @Test
+    fun `findContainersByOrderId should return empty flow when no containers are associated with order`() = runTest {
+        // Arrange
+        val userId = 1L
+        val purchaseNumber = "PO-123"
+
+        val user = User(id = userId, email = "user@example.com", password = "password")
+
+        // Mock usuario actual
+        coEvery { userLoggedService.getCurrentUserId() } returns user
+
+        coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
+                flowOf()
+
+        // Act
+        val result = orderService.findContainersByOrderId(purchaseNumber).toList()
+
+        // Assert
+        assertEquals(0, result.size)
+
+        // Verify
+        coVerify(exactly = 1) { userLoggedService.getCurrentUserId() }
+        coVerify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
     }
 }

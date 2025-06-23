@@ -7,13 +7,14 @@ import com.challenge.nauta_challenge.infrastructure.repository.model.OrderEntity
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 @SpringBootTest
 class OrderRepositoryImplTest {
@@ -22,24 +23,23 @@ class OrderRepositoryImplTest {
     private val orderRepository: OrderRepository = OrderRepositoryImpl(orderDao)
 
     @Test
-    fun savesOrderSuccessfully() = runBlocking {
-        val order = Order(id = null, purchaseNumber = "123", bookingId = 1, invoices = emptyList())
-        val orderEntity = OrderEntity(id = null, purchaseNumber = "123", bookingId = 1)
+    fun savesOrderSuccessfully() = runTest {
+        val order = Order(id = null, purchaseNumber = "PO123", bookingId = 1, invoices = emptyList())
+        val orderEntity = OrderEntity(id = null, purchaseNumber = "PO123", bookingId = 1)
 
         every { orderDao.save(orderEntity) }.returns(Mono.just(orderEntity.copy(id = 1)))
 
         val result = orderRepository.save(order)
 
         assertEquals(1, result.id)
-        assertEquals("123", result.purchaseNumber)
+        assertEquals("PO123", result.purchaseNumber)
         assertEquals(1, result.bookingId)
     }
 
     @Test
-    fun throwsExceptionWhenOrderNotSaved(): Unit = runBlocking {
-        val order = Order(id = null, purchaseNumber = "123", bookingId = 1, invoices = emptyList())
-
-        val orderEntity = OrderEntity(id = null, purchaseNumber = "123", bookingId = 1)
+    fun throwsExceptionWhenOrderNotSaved(): Unit = runTest {
+        val order = Order(id = null, purchaseNumber = "PO123", bookingId = 1, invoices = emptyList())
+        val orderEntity = OrderEntity(id = null, purchaseNumber = "PO123", bookingId = 1)
 
         every { orderDao.save(orderEntity) }.returns(Mono.empty())
 
@@ -49,29 +49,30 @@ class OrderRepositoryImplTest {
     }
 
     @Test
-    fun findsOrderByPurchaseNumberAndBookingId() = runBlocking {
-        val orderEntity = OrderEntity(id = 1, purchaseNumber = "123", bookingId = 1)
-        val order = orderEntity.toModel()
+    fun findsOrderByPurchaseNumberAndBookingId() = runTest {
+        val orderEntity = OrderEntity(id = 1, purchaseNumber = "PO123", bookingId = 1)
 
-        every { orderDao.findByPurchaseNumberAndBookingId("123", 1) }
+        every { orderDao.findByPurchaseNumberAndBookingId("PO123", 1) }
             .returns(Mono.just(orderEntity))
 
-        val result = orderRepository.findByPurchaseNumberAndBookingId("123", 1)
+        val result = orderRepository.findByPurchaseNumberAndBookingId("PO123", 1)
 
-        assertEquals(order, result)
+        assertEquals(1, result?.id)
+        assertEquals("PO123", result?.purchaseNumber)
+        assertEquals(1, result?.bookingId)
     }
 
     @Test
-    fun returnsNullWhenOrderNotFound() = runBlocking {
-        every { orderDao.findByPurchaseNumberAndBookingId("123", 1) }.returns(Mono.empty())
+    fun returnsNullWhenOrderNotFound() = runTest {
+        every { orderDao.findByPurchaseNumberAndBookingId("PO123", 1) }.returns(Mono.empty())
 
-        val result = orderRepository.findByPurchaseNumberAndBookingId("123", 1)
+        val result = orderRepository.findByPurchaseNumberAndBookingId("PO123", 1)
 
-        assertEquals(null, result)
+        assertNull(result)
     }
 
     @Test
-    fun `findAllByBookingId returns flow of orders`() = runBlocking {
+    fun `findAllByBookingId returns flow of orders`() = runTest {
         // Arrange
         val bookingId = 1L
         val orderEntity1 = OrderEntity(id = 1, purchaseNumber = "PO-123", bookingId = bookingId)
@@ -95,7 +96,7 @@ class OrderRepositoryImplTest {
     }
 
     @Test
-    fun `findAllByBookingId returns empty flow when no orders found`() = runBlocking {
+    fun `findAllByBookingId returns empty flow when no orders found`() = runTest {
         // Arrange
         val bookingId = 1L
 

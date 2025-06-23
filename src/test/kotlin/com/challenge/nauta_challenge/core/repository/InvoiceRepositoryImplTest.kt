@@ -7,7 +7,7 @@ import com.challenge.nauta_challenge.infrastructure.repository.model.InvoiceEnti
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -22,7 +22,7 @@ class InvoiceRepositoryImplTest {
     private val invoiceRepository: InvoiceRepository = InvoiceRepositoryImpl(invoiceDao)
 
     @Test
-    fun saveInvoiceOk() = runBlocking {
+    fun saveInvoiceOk() = runTest {
         val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
         val invoiceEntity = InvoiceEntity.fromModel(invoice)
 
@@ -36,7 +36,7 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaFactura(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoNoSeGuardaFactura(): Unit = runTest {
         val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
         val invoiceEntity = InvoiceEntity.fromModel(invoice)
 
@@ -48,7 +48,7 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
-    fun `findAllByOrderId returns flow of invoices`() = runBlocking {
+    fun `findAllByOrderId returns flow of invoices`() = runTest {
         // Arrange
         val orderId = 1L
         val invoiceEntity1 = InvoiceEntity(id = 1, invoiceNumber = "INV-123", orderId = orderId)
@@ -72,7 +72,7 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
-    fun `findAllByOrderId returns empty flow when no invoices found`() = runBlocking {
+    fun `findAllByOrderId returns empty flow when no invoices found`() = runTest {
         // Arrange
         val orderId = 1L
 
@@ -88,7 +88,7 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
-    fun `findByInvoiceNumberAndOrderId returns invoice when found`() = runBlocking {
+    fun `findByInvoiceNumberAndOrderId returns invoice when found`() = runTest {
         // Arrange
         val invoiceNumber = "INV-123"
         val orderId = 1L
@@ -107,7 +107,7 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
-    fun `findByInvoiceNumberAndOrderId returns null when not found`() = runBlocking {
+    fun `findByInvoiceNumberAndOrderId returns null when not found`() = runTest {
         // Arrange
         val invoiceNumber = "INV-123"
         val orderId = 1L

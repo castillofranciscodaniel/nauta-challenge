@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge.infraestructure.delivery
 
+import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.service.OrderService
 import com.challenge.nauta_challenge.infrastructure.delivery.OrderController
@@ -53,4 +54,43 @@ class OrderControllerTest {
         val resultList = result.toList()
         assertEquals(0, resultList.size, "Should return empty list when no orders exist")
     }
+
+    @Test
+    fun `getContainersByOrderId should return containers for specific order`() = runTest {
+        // Given
+        val purchaseNumber = "123L"
+        val container1 = Container(id = 1L, containerNumber = "CONT-001", bookingId = 100L)
+        val container2 = Container(id = 2L, containerNumber = "CONT-002", bookingId = 100L)
+        val containersFlow: Flow<Container> = flowOf(container1, container2)
+
+        coEvery { orderService.findContainersByOrderId(purchaseNumber) }.returns(containersFlow)
+
+        // When
+        val result = orderController.getContainersByOrderId(purchaseNumber)
+
+        // Then
+        val resultList = result.toList()
+        assertEquals(2, resultList.size)
+        assertEquals(container1.id, resultList[0].id)
+        assertEquals(container1.containerNumber, resultList[0].containerNumber)
+        assertEquals(container2.id, resultList[1].id)
+        assertEquals(container2.containerNumber, resultList[1].containerNumber)
+    }
+
+    @Test
+    fun `getContainersByOrderId should return empty flow when no containers are associated with order`() = runTest {
+        // Given
+        val purchaseNumber = "123L"
+        val emptyContainersFlow: Flow<Container> = flowOf()
+
+        coEvery { orderService.findContainersByOrderId(purchaseNumber) }.returns(emptyContainersFlow)
+
+        // When
+        val result = orderController.getContainersByOrderId(purchaseNumber)
+
+        // Then
+        val resultList = result.toList()
+        assertEquals(0, resultList.size)
+    }
+
 }

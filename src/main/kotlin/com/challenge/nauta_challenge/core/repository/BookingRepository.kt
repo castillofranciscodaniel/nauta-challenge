@@ -1,10 +1,6 @@
 package com.challenge.nauta_challenge.core.repository
 
-import com.challenge.nauta_challenge.core.model.Booking
-import com.challenge.nauta_challenge.core.model.Container
-import com.challenge.nauta_challenge.core.model.Invoice
-import com.challenge.nauta_challenge.core.model.Order
-import com.challenge.nauta_challenge.core.model.OrderContainer
+import com.challenge.nauta_challenge.core.model.*
 import kotlinx.coroutines.flow.Flow
 
 interface BookingRepository {
@@ -18,6 +14,7 @@ interface ContainerRepository {
     suspend fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Container?
     fun findAllByBookingIds(bookingIds: List<Long>): Flow<Container>
     fun findAllByBookingId(bookingId: Long): Flow<Container>
+    fun findContainersByPurchaseNumberAndUserId(purchaseNumber: String, userId: Long): Flow<Container>
 }
 
 interface OrderRepository {
@@ -35,4 +32,5 @@ interface InvoiceRepository {
 interface OrderContainerRepository {
     suspend fun save(orderId: Long, containerId: Long): OrderContainer
     suspend fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Boolean
+    fun findContainersByOrderId(orderId: Long): Flow<Long>
 }

@@ -8,7 +8,7 @@ import com.challenge.nauta_challenge.infrastructure.security.JwtTokenProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.authentication.BadCredentialsException
@@ -25,7 +25,7 @@ class AuthServiceTest {
     private val authService = AuthService(userRepository, passwordEncoder, jwtTokenProvider)
 
     @Test
-    fun registraUsuarioCorrectamente() = runBlocking {
+    fun registraUsuarioCorrectamente() = runTest {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
         val encodedPassword = "encodedPassword"
@@ -46,7 +46,7 @@ class AuthServiceTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoEmailYaExiste(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoEmailYaExiste(): Unit = runTest {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
         coEvery { userRepository.existsByEmail("test@example.com") } returns true
@@ -58,7 +58,7 @@ class AuthServiceTest {
     }
 
     @Test
-    fun loginCorrectamente() = runBlocking {
+    fun loginCorrectamente() = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         val usuario = User(id = 1, email = "test@example.com", password = "encodedPassword")
@@ -77,7 +77,7 @@ class AuthServiceTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoUsuarioNoExiste(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoUsuarioNoExiste(): Unit = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         coEvery { userRepository.findByEmail("test@example.com") } returns null
@@ -89,7 +89,7 @@ class AuthServiceTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoContraseñaIncorrecta(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoContraseñaIncorrecta(): Unit = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         val usuario = User(id = 1, email = "test@example.com", password = "encodedPassword")

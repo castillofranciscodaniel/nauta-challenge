@@ -7,8 +7,9 @@ import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEn
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,7 +23,7 @@ class ContainerRepositoryImplTest {
     private val containerRepository: ContainerRepository = ContainerRepositoryImpl(containerDao)
 
     @Test
-    fun guardaContenedorExitosamente() = runBlocking {
+    fun guardaContenedorExitosamente() = runTest {
         val container = Container(id = null, containerNumber = "CONT123", bookingId = 1)
         val containerEntity = ContainerEntity(id = null, containerNumber = "CONT123", bookingId = 1)
 
@@ -36,7 +37,7 @@ class ContainerRepositoryImplTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaContenedor(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoNoSeGuardaContenedor(): Unit = runTest {
         val container = Container(id = null, containerNumber = "CONT123", bookingId = 1)
         val containerEntity = ContainerEntity(id = null, containerNumber = "CONT123", bookingId = 1)
 
@@ -48,7 +49,7 @@ class ContainerRepositoryImplTest {
     }
 
     @Test
-    fun encuentraContenedorPorNumeroYBookingId() = runBlocking {
+    fun encuentraContenedorPorNumeroYBookingId() = runTest {
         val containerEntity = ContainerEntity(id = 1, containerNumber = "CONT123", bookingId = 1)
 
         every { containerDao.findByContainerNumberAndBookingId("CONT123", 1) }
@@ -62,7 +63,7 @@ class ContainerRepositoryImplTest {
     }
 
     @Test
-    fun devuelveNullCuandoNoEncuentraContenedor() = runBlocking {
+    fun devuelveNullCuandoNoEncuentraContenedor() = runTest {
         every { containerDao.findByContainerNumberAndBookingId("CONT123", 1) }.returns(Mono.empty())
 
         val resultado = containerRepository.findByContainerNumberAndBookingId("CONT123", 1)
@@ -71,7 +72,7 @@ class ContainerRepositoryImplTest {
     }
 
     @Test
-    fun `findAllByBookingIds returns flow of containers from bookings`() = runBlocking {
+    fun `findAllByBookingIds returns flow of containers from bookings`() = runTest {
         // Arrange
         val bookingIds = listOf(1L, 2L)
         val containerEntity1 = ContainerEntity(id = 1, containerNumber = "CONT-001", bookingId = 1)
@@ -98,7 +99,7 @@ class ContainerRepositoryImplTest {
     }
 
     @Test
-    fun `findAllByBookingIds returns empty flow when no containers found`() = runBlocking {
+    fun `findAllByBookingIds returns empty flow when no containers found`() = runTest {
         // Arrange
         val bookingIds = listOf(1L, 2L)
 
@@ -107,6 +108,45 @@ class ContainerRepositoryImplTest {
 
         // Act
         val result = containerRepository.findAllByBookingIds(bookingIds).toList()
+
+        // Assert
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `findContainersByPurchaseNumberAndUserId returns containers for specific purchase and user`() = runTest {
+        // Arrange
+        val purchaseNumber = "PO-123"
+        val userId = 10L
+        val containerEntity1 = ContainerEntity(id = 1, containerNumber = "CONT-001", bookingId = 5L)
+        val containerEntity2 = ContainerEntity(id = 2, containerNumber = "CONT-002", bookingId = 5L)
+
+        every { containerDao.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
+            Flux.just(containerEntity1, containerEntity2)
+
+        // Act
+        val result = containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId).toList()
+
+        // Assert
+        assertEquals(2, result.size)
+        assertEquals(1L, result[0].id)
+        assertEquals("CONT-001", result[0].containerNumber)
+        assertEquals(5L, result[0].bookingId)
+        assertEquals(2L, result[1].id)
+        assertEquals("CONT-002", result[1].containerNumber)
+        assertEquals(5L, result[1].bookingId)
+    }
+
+    @Test
+    fun `findContainersByPurchaseNumberAndUserId returns empty flow when no containers found`() = runTest {
+        // Arrange
+        val purchaseNumber = "PO-123"
+        val userId = 10L
+
+        every { containerDao.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns Flux.empty()
+
+        // Act
+        val result = containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId).toList()
 
         // Assert
         assertEquals(0, result.size)

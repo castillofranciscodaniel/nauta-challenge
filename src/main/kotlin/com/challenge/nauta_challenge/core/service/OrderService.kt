@@ -1,7 +1,10 @@
 package com.challenge.nauta_challenge.core.service
 
+import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.repository.BookingRepository
+import com.challenge.nauta_challenge.core.repository.ContainerRepository
+import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +19,8 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val invoiceService: InvoiceService,
     private val bookingRepository: BookingRepository,
-    private val userLoggedService: UserLoggedService
+    private val userLoggedService: UserLoggedService,
+    private val containerRepository: ContainerRepository
 ) {
     suspend fun saveOrdersForBooking(orders: List<Order>, bookingId: Long): List<Order> {
         return orders.map { order ->
@@ -46,4 +50,11 @@ class OrderService(
                 order.copy(invoices = invoices)
             }
     }
+
+    suspend fun findContainersByOrderId(purchaseNumber: String): Flow<Container> {
+        val currentUser = userLoggedService.getCurrentUserId()
+
+        return containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, currentUser.id!!)
+    }
+
 }

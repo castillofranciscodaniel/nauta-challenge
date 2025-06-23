@@ -6,7 +6,7 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderContaine
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderContainerEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Mono
 import kotlin.test.*
@@ -18,7 +18,7 @@ class OrderContainerRepositoryImplTest {
     private val orderContainerRepository: OrderContainerRepository = OrderContainerRepositoryImpl(orderContainerDao)
 
     @Test
-    fun guardaRelacionOrdenContenedorExitosamente() = runBlocking {
+    fun guardaRelacionOrdenContenedorExitosamente() = runTest {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
@@ -32,7 +32,7 @@ class OrderContainerRepositoryImplTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaRelacion() = runBlocking {
+    fun lanzaExcepcionCuandoNoSeGuardaRelacion() = runTest {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
@@ -45,7 +45,7 @@ class OrderContainerRepositoryImplTest {
     }
 
     @Test
-    fun verificaExistenciaDeRelacionCuandoExiste() = runBlocking {
+    fun verificaExistenciaDeRelacionCuandoExiste() = runTest {
         val orderId = 1L
         val containerId = 2L
 
@@ -57,7 +57,7 @@ class OrderContainerRepositoryImplTest {
     }
 
     @Test
-    fun verificaExistenciaDeRelacionCuandoNoExiste() = runBlocking {
+    fun verificaExistenciaDeRelacionCuandoNoExiste() = runTest {
         val orderId = 1L
         val containerId = 2L
 
@@ -69,7 +69,7 @@ class OrderContainerRepositoryImplTest {
     }
 
     @Test
-    fun devuelveFalseCuandoExistsByOrderIdAndContainerIdRetornaMonoEmpty() = runBlocking {
+    fun devuelveFalseCuandoExistsByOrderIdAndContainerIdRetornaMonoEmpty() = runTest {
         val orderId = 1L
         val containerId = 2L
 

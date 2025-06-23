@@ -5,6 +5,8 @@ import com.challenge.nauta_challenge.core.model.OrderContainer
 import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderContainerEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.stereotype.Component
 
@@ -21,5 +23,11 @@ class OrderContainerRepositoryImpl(
 
     override suspend fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Boolean {
         return orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId).awaitSingleOrNull() ?: false
+    }
+
+    override fun findContainersByOrderId(orderId: Long): Flow<Long> {
+        return orderContainerDao.findAllByOrderId(orderId)
+            .map { it.containerId }
+            .asFlow()
     }
 }

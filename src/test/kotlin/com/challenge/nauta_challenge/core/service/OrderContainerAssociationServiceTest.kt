@@ -7,167 +7,160 @@ import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
 class OrderContainerAssociationServiceTest {
 
-    private val orderContainerRepository = mockk<OrderContainerRepository>()
-    private val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
-
     @Test
-    fun creaAsociacionesCorrectamenteUnaOrdenAMultiplesContenedores(): Unit = runBlocking {
+    fun creaAsociacionesCorrectamenteUnaOrdenAMultiplesContenedores(): Unit = runTest {
         // Arrange
-        val order = Order(id = 1L, purchaseNumber = "PO-123", bookingId = 10L, invoices = emptyList())
-        val container1 = Container(id = 101L, containerNumber = "CONT-001", bookingId = 10L)
-        val container2 = Container(id = 102L, containerNumber = "CONT-002", bookingId = 10L)
-        val containers = listOf(container1, container2)
-        val bookingNumber = "BOOK-123"
+        val orderContainerRepository = mockk<OrderContainerRepository>()
+        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
-        val orderContainer_1 = OrderContainer(
-            orderId = 1L,
-            containerId = 101L
+        val bookingNumber = "BOOK123"
+        val orderId = 1L
+        val containerId1 = 1L
+        val containerId2 = 2L
+
+        val orders = listOf(Order(id = orderId, purchaseNumber = "PO123", bookingId = 10, invoices = emptyList()))
+        val containers = listOf(
+            Container(id = containerId1, containerNumber = "CONT1", bookingId = 10),
+            Container(id = containerId2, containerNumber = "CONT2", bookingId = 10)
         )
-        val orderContainer_2 = OrderContainer(
-            orderId = 1L,
-            containerId = 102L
-        )
-        
-        coEvery { 
-            orderContainerRepository.existsByOrderIdAndContainerId(1L, 101L) 
-        } returns false
-        
-        coEvery { 
-            orderContainerRepository.existsByOrderIdAndContainerId(1L, 102L) 
-        } returns false
-        
-        coEvery { 
-            orderContainerRepository.save(1L, 101L) 
-        } returns orderContainer_1
-        
-        coEvery { 
-            orderContainerRepository.save(1L, 102L) 
-        } returns orderContainer_2
+
+        val orderContainer1 = OrderContainer(orderId = orderId, containerId = containerId1)
+        val orderContainer2 = OrderContainer(orderId = orderId, containerId = containerId2)
+
+        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) } returns false
+        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) } returns false
+        coEvery { orderContainerRepository.save(orderId, containerId1) } returns orderContainer1
+        coEvery { orderContainerRepository.save(orderId, containerId2) } returns orderContainer2
 
         // Act
-        orderContainerAssociationService.createAssociations(listOf(order), containers, bookingNumber)
+        orderContainerAssociationService.createAssociations(
+            orders = orders,
+            containers = containers,
+            bookingNumber = bookingNumber
+        )
 
         // Assert
-        coVerify(exactly = 1) { orderContainerRepository.save(1L, 101L) }
-        coVerify(exactly = 1) { orderContainerRepository.save(1L, 102L) }
+        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) }
+        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) }
+        coVerify(exactly = 1) { orderContainerRepository.save(orderId, containerId1) }
+        coVerify(exactly = 1) { orderContainerRepository.save(orderId, containerId2) }
     }
 
     @Test
-    fun creaAsociacionesCorrectamenteMultiplesOrdenesAUnContenedor(): Unit = runBlocking {
+    fun creaAsociacionesCorrectamenteMultiplesOrdenesAUnContenedor(): Unit = runTest {
         // Arrange
-        val order1 = Order(id = 1L, purchaseNumber = "PO-123", bookingId = 10L, invoices = emptyList())
-        val order2 = Order(id = 2L, purchaseNumber = "PO-456", bookingId = 10L, invoices = emptyList())
-        val orders = listOf(order1, order2)
-        val container = Container(id = 101L, containerNumber = "CONT-001", bookingId = 10L)
-        val bookingNumber = "BOOK-123"
+        val orderContainerRepository = mockk<OrderContainerRepository>()
+        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
-        val orderContainer_1 = OrderContainer(
-            orderId = 1L,
-            containerId = 101L
-        )
+        val bookingNumber = "BOOK123"
+        val orderId1 = 1L
+        val orderId2 = 2L
+        val containerId = 1L
 
-        val orderContainer_2 = OrderContainer(
-            orderId = 2L,
-            containerId = 101L
+        val orders = listOf(
+            Order(id = orderId1, purchaseNumber = "PO1", bookingId = 10, invoices = emptyList()),
+            Order(id = orderId2, purchaseNumber = "PO2", bookingId = 10, invoices = emptyList())
         )
-        
-        coEvery { 
-            orderContainerRepository.existsByOrderIdAndContainerId(1L, 101L) 
-        } returns false
-        
-        coEvery { 
-            orderContainerRepository.existsByOrderIdAndContainerId(2L, 101L) 
-        } returns false
-        
-        coEvery { 
-            orderContainerRepository.save(1L, 101L) 
-        } returns orderContainer_1
-        
-        coEvery { 
-            orderContainerRepository.save(2L, 101L) 
-        } returns orderContainer_2
+        val containers = listOf(Container(id = containerId, containerNumber = "CONT1", bookingId = 10))
+
+        val orderContainer1 = OrderContainer(orderId = orderId1, containerId = containerId)
+        val orderContainer2 = OrderContainer(orderId = orderId2, containerId = containerId)
+
+        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) } returns false
+        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) } returns false
+        coEvery { orderContainerRepository.save(orderId1, containerId) } returns orderContainer1
+        coEvery { orderContainerRepository.save(orderId2, containerId) } returns orderContainer2
 
         // Act
-        orderContainerAssociationService.createAssociations(orders, listOf(container), bookingNumber)
+        orderContainerAssociationService.createAssociations(
+            orders = orders,
+            containers = containers,
+            bookingNumber = bookingNumber
+        )
 
         // Assert
-        coVerify(exactly = 1) { orderContainerRepository.save(1L, 101L) }
-        coVerify(exactly = 1) { orderContainerRepository.save(2L, 101L) }
+        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) }
+        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) }
+        coVerify(exactly = 1) { orderContainerRepository.save(orderId1, containerId) }
+        coVerify(exactly = 1) { orderContainerRepository.save(orderId2, containerId) }
     }
 
     @Test
-    fun noCrearAsociacionSiYaExiste(): Unit = runBlocking {
+    fun noCrearAsociacionSiYaExiste(): Unit = runTest {
         // Arrange
-        val order = Order(id = 1L, purchaseNumber = "PO-123", bookingId = 10L, invoices = emptyList())
-        val container = Container(id = 101L, containerNumber = "CONT-001", bookingId = 10L)
-        val bookingNumber = "BOOK-123"
-        
-        coEvery { 
-            orderContainerRepository.existsByOrderIdAndContainerId(1L, 101L) 
-        } returns true
+        val orderContainerRepository = mockk<OrderContainerRepository>()
+        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
+
+        val bookingNumber = "BOOK123"
+        val orderId = 1L
+        val containerId = 1L
+
+        val orders = listOf(Order(id = orderId, purchaseNumber = "PO123", bookingId = 10, invoices = emptyList()))
+        val containers = listOf(Container(id = containerId, containerNumber = "CONT1", bookingId = 10))
+
+        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) } returns true
 
         // Act
-        orderContainerAssociationService.createAssociations(listOf(order), listOf(container), bookingNumber)
+        orderContainerAssociationService.createAssociations(
+            orders = orders,
+            containers = containers,
+            bookingNumber = bookingNumber
+        )
 
         // Assert
+        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) }
+        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
+    }
+
+
+    @Test
+    fun noCrearAsociacionesCuandoNoHayOrdenes(): Unit = runTest {
+        // Arrange
+        val orderContainerRepository = mockk<OrderContainerRepository>()
+        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
+
+        val bookingNumber = "BOOK123"
+        val containerId = 1L
+
+        val orders = emptyList<Order>()
+        val containers = listOf(Container(id = containerId, containerNumber = "CONT1", bookingId = 10))
+
+        // Act
+        orderContainerAssociationService.createAssociations(
+            orders = orders,
+            containers = containers,
+            bookingNumber = bookingNumber
+        )
+
+        // Assert
+        coVerify(exactly = 0) { orderContainerRepository.existsByOrderIdAndContainerId(any(), any()) }
         coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
     }
 
     @Test
-    fun noCrearAsociacionesCuandoHayRelacionAmbigua(): Unit = runBlocking {
+    fun noCrearAsociacionesCuandoNoHayContenedores(): Unit = runTest {
         // Arrange
-        val order1 = Order(id = 1L, purchaseNumber = "PO-123", bookingId = 10L, invoices = emptyList())
-        val order2 = Order(id = 2L, purchaseNumber = "PO-456", bookingId = 10L, invoices = emptyList())
-        val container1 = Container(id = 101L, containerNumber = "CONT-001", bookingId = 10L)
-        val container2 = Container(id = 102L, containerNumber = "CONT-002", bookingId = 10L)
-        val bookingNumber = "BOOK-123"
+        val orderContainerRepository = mockk<OrderContainerRepository>()
+        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
+
+        val bookingNumber = "BOOK123"
+        val orderId = 1L
+
+        val orders = listOf(Order(id = orderId, purchaseNumber = "PO123", bookingId = 10, invoices = emptyList()))
+        val containers = emptyList<Container>()
 
         // Act
         orderContainerAssociationService.createAssociations(
-            listOf(order1, order2), 
-            listOf(container1, container2), 
-            bookingNumber
-        )
-
-        // Assert
-        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
-    }
-
-    @Test
-    fun noCrearAsociacionesCuandoNoHayOrdenes(): Unit = runBlocking {
-        // Arrange
-        val container = Container(id = 101L, containerNumber = "CONT-001", bookingId = 10L)
-        val bookingNumber = "BOOK-123"
-
-        // Act
-        orderContainerAssociationService.createAssociations(
-            emptyList(), 
-            listOf(container), 
-            bookingNumber
-        )
-
-        // Assert
-        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
-    }
-
-    @Test
-    fun noCrearAsociacionesCuandoNoHayContenedores(): Unit = runBlocking {
-        // Arrange
-        val order = Order(id = 1L, purchaseNumber = "PO-123", bookingId = 10L, invoices = emptyList())
-        val bookingNumber = "BOOK-123"
-
-        // Act
-        orderContainerAssociationService.createAssociations(
-            listOf(order), 
-            emptyList(), 
-            bookingNumber
+            orders = orders,
+            containers = containers,
+            bookingNumber = bookingNumber
         )
 
         // Assert

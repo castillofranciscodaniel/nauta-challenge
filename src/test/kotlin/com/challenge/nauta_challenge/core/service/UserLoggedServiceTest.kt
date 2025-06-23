@@ -5,7 +5,7 @@ import com.challenge.nauta_challenge.core.model.User
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,7 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.core.context.SecurityContext
-import org.springframework.security.core.context.SecurityContextHolder
 import reactor.core.publisher.Mono
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -37,7 +36,7 @@ class UserLoggedServiceTest {
     }
 
     @Test
-    fun devuelveUsuarioActualCuandoEstáAutenticado(): Unit = runBlocking {
+    fun devuelveUsuarioActualCuandoEstáAutenticado(): Unit = runTest {
         // Arrange
         val userId = 1L
         val userEmail = "test@example.com"
@@ -59,7 +58,7 @@ class UserLoggedServiceTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoHayAutenticacion(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoNoHayAutenticacion(): Unit = runTest {
         // Arrange
         every { securityContext.authentication } returns null
 
@@ -70,7 +69,7 @@ class UserLoggedServiceTest {
     }
 
     @Test
-    fun lanzaExcepcionCuandoPrincipalNoEsCustomUserDetails(): Unit = runBlocking {
+    fun lanzaExcepcionCuandoPrincipalNoEsCustomUserDetails(): Unit = runTest {
         // Arrange
         every { securityContext.authentication } returns authentication
         every { authentication.principal } returns "not a CustomUserDetails"
