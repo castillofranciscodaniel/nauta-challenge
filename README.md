@@ -89,41 +89,30 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 Respuesta: Token JWT que debe usarse en el encabezado `Authorization: Bearer {token}` para las demás peticiones.
 
-### Bookings (Reservas)
+### Bookings 
 
-#### Obtener todas las reservas del usuario
-```bash
-curl -X GET http://localhost:8080/api/bookings \
-  -H "Authorization: Bearer {tu-token}"
-```
 
-#### Obtener reserva por número
-```bash
-curl -X GET http://localhost:8080/api/bookings/{bookingNumber} \
-  -H "Authorization: Bearer {tu-token}"
-```
-
-#### Crear nueva reserva
+#### Crear nuevo booking
 ```bash
 curl -X POST http://localhost:8080/api/bookings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {tu-token}" \
   -d '{
-    "bookingNumber": "BOOK123",
+    "booking": "BOOK123",
     "containers": [
       {
-        "containerNumber": "CONT001"
+        "container": "CONT001"
       },
       {
-        "containerNumber": "CONT002"
+        "container": "CONT002"
       }
     ],
     "orders": [
       {
-        "purchaseNumber": "PO-001",
+        "purchase": "PO-001",
         "invoices": [
           {
-            "invoiceNumber": "INV-001"
+            "invoice": "INV-001"
           }
         ]
       }
@@ -165,7 +154,7 @@ El proyecto sigue una arquitectura hexagonal con:
 
 - **Core**: Modelos de dominio y lógica de negocio
 - **Adapters**: Implementaciones concretas de los repositorios
-- **Infrastructure**: Controladores REST y configuraciones
+- **Infrastructure**: Controladores REST, seguridad y configuraciones
 
 ## Tests
 
@@ -179,5 +168,5 @@ Para ejecutar los tests:
 
 - El proyecto utiliza R2DBC para operaciones de base de datos reactivas
 - Se implementa autenticación JWT para proteger los endpoints
-- Se aplica programación reactiva con Kotlin Coroutines
+- Se aplica programación reactiva con Kotlin Coroutines y Spring WebFlux
 
