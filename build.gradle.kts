@@ -30,8 +30,8 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5") // Para soporte JSON
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
-	implementation("org.springframework.boot:spring-boot-starter-oauth2-authorization-server")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
