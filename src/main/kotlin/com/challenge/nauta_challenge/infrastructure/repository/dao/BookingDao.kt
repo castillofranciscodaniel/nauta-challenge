@@ -17,6 +17,8 @@ interface BookingDao : R2dbcRepository<BookingEntity, Long> {
 interface ContainerDao : R2dbcRepository<ContainerEntity, Long> {
     fun findByContainerNumber(containerNumber: String): Mono<ContainerEntity>
     fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Mono<ContainerEntity>
+    fun findAllByBookingIdIn(bookingIds: List<Long>): Flux<ContainerEntity>
+    fun findAllByBookingId(bookingId: Long): Flux<ContainerEntity>
 }
 
 @Repository

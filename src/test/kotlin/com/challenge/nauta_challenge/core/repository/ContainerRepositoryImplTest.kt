@@ -6,6 +6,7 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.ContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEntity
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Mono
@@ -67,5 +68,47 @@ class ContainerRepositoryImplTest {
         val resultado = containerRepository.findByContainerNumberAndBookingId("CONT123", 1)
 
         assertNull(resultado)
+    }
+
+    @Test
+    fun `findAllByBookingIds returns flow of containers from bookings`() = runBlocking {
+        // Arrange
+        val bookingIds = listOf(1L, 2L)
+        val containerEntity1 = ContainerEntity(id = 1, containerNumber = "CONT-001", bookingId = 1)
+        val containerEntity2 = ContainerEntity(id = 2, containerNumber = "CONT-002", bookingId = 1)
+        val containerEntity3 = ContainerEntity(id = 3, containerNumber = "CONT-003", bookingId = 2)
+
+        every { containerDao.findAllByBookingIdIn(bookingIds) } returns
+            reactor.core.publisher.Flux.just(containerEntity1, containerEntity2, containerEntity3)
+
+        // Act
+        val result = containerRepository.findAllByBookingIds(bookingIds).toList()
+
+        // Assert
+        assertEquals(3, result.size)
+        assertEquals(1, result[0].id)
+        assertEquals("CONT-001", result[0].containerNumber)
+        assertEquals(1, result[0].bookingId)
+        assertEquals(2, result[1].id)
+        assertEquals("CONT-002", result[1].containerNumber)
+        assertEquals(1, result[1].bookingId)
+        assertEquals(3, result[2].id)
+        assertEquals("CONT-003", result[2].containerNumber)
+        assertEquals(2, result[2].bookingId)
+    }
+
+    @Test
+    fun `findAllByBookingIds returns empty flow when no containers found`() = runBlocking {
+        // Arrange
+        val bookingIds = listOf(1L, 2L)
+
+        every { containerDao.findAllByBookingIdIn(bookingIds) } returns
+            reactor.core.publisher.Flux.empty()
+
+        // Act
+        val result = containerRepository.findAllByBookingIds(bookingIds).toList()
+
+        // Assert
+        assertEquals(0, result.size)
     }
 }

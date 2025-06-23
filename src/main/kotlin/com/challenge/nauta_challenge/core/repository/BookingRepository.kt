@@ -16,6 +16,8 @@ interface BookingRepository {
 interface ContainerRepository {
     suspend fun save(container: Container): Container
     suspend fun findByContainerNumberAndBookingId(containerNumber: String, bookingId: Long): Container?
+    fun findAllByBookingIds(bookingIds: List<Long>): Flow<Container>
+    fun findAllByBookingId(bookingId: Long): Flow<Container>
 }
 
 interface OrderRepository {
