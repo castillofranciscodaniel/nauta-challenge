@@ -27,6 +27,7 @@ interface OrderRepository {
 interface InvoiceRepository {
     suspend fun save(invoice: Invoice): Invoice
     fun findAllByOrderId(orderId: Long): Flow<Invoice>
+    suspend fun findByInvoiceNumberAndOrderId(invoiceNumber: String, orderId: Long): Invoice?
 }
 
 interface OrderContainerRepository {

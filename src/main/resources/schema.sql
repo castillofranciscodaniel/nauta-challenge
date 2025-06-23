@@ -9,41 +9,44 @@ CREATE TABLE IF NOT EXISTS users (
 -- Tabla de Bookings
 CREATE TABLE IF NOT EXISTS bookings (
                                         id SERIAL PRIMARY KEY,
-                                        booking_number VARCHAR(50) NOT NULL UNIQUE,
-                                        usuario_id BIGINT NOT NULL,
-                                        origen VARCHAR(100),
-                                        destino VARCHAR(100),
-                                        fecha_salida TIMESTAMP,
-                                        fecha_llegada TIMESTAMP,
-                                        estado VARCHAR(50),
-                                        FOREIGN KEY (usuario_id) REFERENCES users(id)
+                                        booking_number VARCHAR(50) NOT NULL,
+                                        user_id BIGINT NOT NULL,
+                                        UNIQUE (booking_number, user_id),
+                                        FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Tabla de Containers
 CREATE TABLE IF NOT EXISTS containers (
                                           id SERIAL PRIMARY KEY,
-                                          container_number VARCHAR(50) NOT NULL UNIQUE,
-                                          tipo VARCHAR(50),
-                                          capacidad DECIMAL(10,2),
-                                          estado VARCHAR(50)
+                                          container_number VARCHAR(50) NOT NULL,
+                                          booking_id BIGINT NOT NULL,
+                                          UNIQUE (container_number, booking_id),
+                                          FOREIGN KEY (booking_id) REFERENCES bookings(id)
 );
 
 -- Tabla de Orders
 CREATE TABLE IF NOT EXISTS orders (
                                       id SERIAL PRIMARY KEY,
-                                      purchase_number VARCHAR(50) NOT NULL UNIQUE,
-                                      usuario_id BIGINT NOT NULL,
-                                      fecha_compra TIMESTAMP,
-                                      monto DECIMAL(10,2),
-                                      estado VARCHAR(50),
-                                      FOREIGN KEY (usuario_id) REFERENCES users(id)
+                                      purchase_number VARCHAR(50) NOT NULL,
+                                      booking_id BIGINT NOT NULL,
+                                      UNIQUE (purchase_number, booking_id),
+                                      FOREIGN KEY (booking_id) REFERENCES bookings(id)
 );
 
+-- Tabla de Invoice
+CREATE TABLE IF NOT EXISTS invoices (
+                                      id SERIAL PRIMARY KEY,
+                                      invoice_number VARCHAR(50) NOT NULL,
+                                      order_id BIGINT NOT NULL,
+                                      UNIQUE (invoice_number, order_id),
+                                      FOREIGN KEY (order_id) REFERENCES orders(id)
+    );
+
 -- Tabla de relación entre Bookings y Containers (si es necesaria)
-CREATE TABLE IF NOT EXISTS booking_containers (
-                                                  booking_id BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS order_containers (
+                                                  id SERIAL PRIMARY KEY,
+                                                  order_id BIGINT NOT NULL,
                                                   container_id BIGINT NOT NULL,
-                                                  PRIMARY KEY (booking_id, container_id),
-                                                  FOREIGN KEY (booking_id) REFERENCES bookings(id),
+                                                  FOREIGN KEY (order_id) REFERENCES orders(id),
                                                   FOREIGN KEY (container_id) REFERENCES containers(id)
 );

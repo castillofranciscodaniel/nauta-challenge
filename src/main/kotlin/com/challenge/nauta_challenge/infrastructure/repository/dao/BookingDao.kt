@@ -30,6 +30,7 @@ interface OrderDao : R2dbcRepository<OrderEntity, Long> {
 interface InvoiceDao : R2dbcRepository<InvoiceEntity, Long> {
     fun findByInvoiceNumber(invoiceNumber: String): Mono<InvoiceEntity>
     fun findAllByOrderId(orderId: Long): Flux<InvoiceEntity>
+    fun findByInvoiceNumberAndOrderId(invoiceNumber: String, orderId: Long): Mono<InvoiceEntity>
 }
 
 @Repository

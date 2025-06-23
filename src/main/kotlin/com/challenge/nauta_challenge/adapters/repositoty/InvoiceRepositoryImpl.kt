@@ -1,6 +1,5 @@
 package com.challenge.nauta_challenge.adapters.repositoty
 
-import com.challenge.nauta_challenge.core.exception.NotFoundException
 import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.repository.InvoiceRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.InvoiceDao
@@ -24,5 +23,10 @@ class InvoiceRepositoryImpl(
         return invoiceDao.findAllByOrderId(orderId)
             .map { it.toModel() }
             .asFlow()
+    }
+
+    override suspend fun findByInvoiceNumberAndOrderId(invoiceNumber: String, orderId: Long): Invoice? {
+        return invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId)
+            .awaitSingleOrNull()?.toModel()
     }
 }

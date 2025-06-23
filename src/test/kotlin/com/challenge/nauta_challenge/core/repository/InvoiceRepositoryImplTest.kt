@@ -22,7 +22,7 @@ class InvoiceRepositoryImplTest {
     private val invoiceRepository: InvoiceRepository = InvoiceRepositoryImpl(invoiceDao)
 
     @Test
-    fun guardaFacturaExitosamente() = runBlocking {
+    fun saveInvoiceOk() = runBlocking {
         val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
         val invoiceEntity = InvoiceEntity.fromModel(invoice)
 
@@ -85,5 +85,40 @@ class InvoiceRepositoryImplTest {
 
         // Assert
         assertEquals(0, invoices.size)
+    }
+
+    @Test
+    fun `findByInvoiceNumberAndOrderId returns invoice when found`() = runBlocking {
+        // Arrange
+        val invoiceNumber = "INV-123"
+        val orderId = 1L
+        val invoiceEntity = InvoiceEntity(id = 1, invoiceNumber = invoiceNumber, orderId = orderId)
+
+        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) } returns
+                Mono.just(invoiceEntity)
+
+        // Act
+        val result = invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId)
+
+        // Assert
+        assertEquals(1L, result?.id)
+        assertEquals(invoiceNumber, result?.invoiceNumber)
+        assertEquals(orderId, result?.orderId)
+    }
+
+    @Test
+    fun `findByInvoiceNumberAndOrderId returns null when not found`() = runBlocking {
+        // Arrange
+        val invoiceNumber = "INV-123"
+        val orderId = 1L
+
+        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) } returns
+                Mono.empty()
+
+        // Act
+        val result = invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId)
+
+        // Assert
+        assertEquals(null, result)
     }
 }
