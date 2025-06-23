@@ -3,6 +3,7 @@ plugins {
 	kotlin("plugin.spring") version "1.9.25"
 	id("org.springframework.boot") version "3.5.0"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("jacoco")
 }
 
 group = "com.challenge"
@@ -54,6 +55,63 @@ kotlin {
 	compilerOptions {
 		freeCompilerArgs.addAll("-Xjsr305=strict")
 	}
+}
+
+// Configuración para Jacoco (cobertura de código)
+jacoco {
+    toolVersion = "0.8.11" // Versión de Jacoco
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required.set(true)
+        csv.required.set(false)
+        html.required.set(true)
+    }
+
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "**/config/**",
+                    "**/model/**",
+                    "**/*Application*",
+                    "**/*Configuration*",
+                    "**/exception/**",
+                    "**/dto/**"
+                )
+            }
+        })
+    )
+
+    dependsOn(tasks.test)
+}
+
+tasks.test {
+    finalizedBy(tasks.jacocoTestReport) // Generar reporte automáticamente después de ejecutar tests
+
+    // Mostrar información detallada sobre los tests
+	testLogging {
+		events("passed", "skipped", "failed")
+		showExceptions = true
+		showCauses = true
+		showStackTraces = true
+		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+	}
+
+	// Configurar opciones de memoria y entorno para JVM
+	jvmArgs(
+		"-Xmx512m",
+		"-XX:MaxMetaspaceSize=256m",
+		"-Dspring.profiles.active=test"
+	)
+
+	// Habilitar salida estándar para depuración
+	systemProperty("spring.test.constructor.autowire.mode", "all")
+	systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+
+	// Asegurarse de que los tests se ejecuten cada vez
+	outputs.upToDateWhen { false }
 }
 
 tasks.withType<Test> {

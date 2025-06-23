@@ -10,6 +10,7 @@ Este proyecto es una API RESTful construida con Spring Boot y Kotlin que gestion
    - [Bookings (Reservas)](#bookings-reservas)
    - [Orders (Órdenes de compra)](#orders-órdenes-de-compra)
    - [Containers (Contenedores)](#containers-contenedores)
+3. [Testing y cobertura de código](#testing-y-cobertura-de-código)
 
 ## Cómo levantar el proyecto
 
@@ -156,17 +157,42 @@ El proyecto sigue una arquitectura hexagonal con:
 - **Adapters**: Implementaciones concretas de los repositorios
 - **Infrastructure**: Controladores REST, seguridad y configuraciones
 
-## Tests
+## Testing y cobertura de código
 
-Para ejecutar los tests:
+### Ejecución de pruebas
+
+Para ejecutar las pruebas unitarias del proyecto:
 
 ```bash
 ./gradlew test
 ```
+
+### Informe de cobertura de código
+
+El proyecto está configurado con Jacoco para generar informes de cobertura de código.
+
+Para ejecutar las pruebas y generar el informe de cobertura:
+
+```bash
+./gradlew test jacocoTestReport
+```
+
+O puedes utilizar el script incluido y se abrirá automáticamente el informe en tu navegador:
+
+```bash
+./run-coverage.sh
+```
+
+El informe de cobertura se generará en `build/reports/jacoco/test/html/index.html` y se abrirá automáticamente en tu navegador si usas el script `run-coverage.sh`.
+
+### Notas importantes sobre las pruebas
+
+- Las pruebas utilizan un perfil de configuración específico (`test`) con una base de datos H2 en memoria.
+- Los archivos de configuración para las pruebas se encuentran en `src/test/resources/`.
+- Para añadir nuevas pruebas, asegúrate de usar la configuración adecuada añadiendo la anotación `@ActiveProfiles("test")` a tus clases de prueba.
 
 ## Consideraciones técnicas
 
 - El proyecto utiliza R2DBC para operaciones de base de datos reactivas
 - Se implementa autenticación JWT para proteger los endpoints
 - Se aplica programación reactiva con Kotlin Coroutines y Spring WebFlux
-
