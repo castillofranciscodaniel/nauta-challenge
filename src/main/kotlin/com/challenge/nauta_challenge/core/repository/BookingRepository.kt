@@ -21,6 +21,7 @@ interface OrderRepository {
     suspend fun save(order: Order): Order
     suspend fun findByPurchaseNumberAndBookingId(purchaseNumber: String, bookingId: Long): Order?
     fun findAllByBookingId(bookingId: Long): Flow<Order>
+    fun findOrdersByContainerIdAndUserId(containerId: String, userId: Long): Flow<Order>
 }
 
 interface InvoiceRepository {
@@ -33,4 +34,5 @@ interface OrderContainerRepository {
     suspend fun save(orderId: Long, containerId: Long): OrderContainer
     suspend fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Boolean
     fun findContainersByOrderId(orderId: Long): Flow<Long>
+    fun findOrdersByContainerId(containerId: Long): Flow<Long>
 }

@@ -111,4 +111,45 @@ class OrderRepositoryImplTest {
         assertEquals(0, orders.size)
     }
 
+    @Test
+    fun findsOrdersByContainerIdAndUserId() = runTest {
+        // Arrange
+        val containerId = "CONT-001"
+        val userId = 1L
+        val orderEntities = listOf(
+            OrderEntity(id = 1, purchaseNumber = "PO-001", bookingId = 1),
+            OrderEntity(id = 2, purchaseNumber = "PO-002", bookingId = 1)
+        )
+
+        every { orderDao.findOrdersByContainerIdAndUserId(containerId, userId) } returns
+            Flux.fromIterable(orderEntities)
+
+        // Act
+        val result = orderRepository.findOrdersByContainerIdAndUserId(containerId, userId).toList()
+
+        // Assert
+        assertEquals(2, result.size)
+        assertEquals(1, result[0].id)
+        assertEquals("PO-001", result[0].purchaseNumber)
+        assertEquals(1, result[0].bookingId)
+        assertEquals(2, result[1].id)
+        assertEquals("PO-002", result[1].purchaseNumber)
+        assertEquals(1, result[1].bookingId)
+    }
+
+    @Test
+    fun findsOrdersByContainerIdAndUserId_EmptyResult() = runTest {
+        // Arrange
+        val containerId = "CONT-001"
+        val userId = 1L
+
+        every { orderDao.findOrdersByContainerIdAndUserId(containerId, userId) } returns Flux.empty()
+
+        // Act
+        val result = orderRepository.findOrdersByContainerIdAndUserId(containerId, userId).toList()
+
+        // Assert
+        assertEquals(0, result.size)
+    }
+
 }

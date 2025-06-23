@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.infraestructure.delivery
 
 import com.challenge.nauta_challenge.core.model.Container
+import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.service.ContainerService
 import com.challenge.nauta_challenge.infrastructure.delivery.ContainerController
 import io.mockk.coEvery
@@ -49,6 +50,44 @@ class ContainerControllerTest {
 
         // When
         val result = containerController.getAllContainers()
+
+        // Then
+        val resultList = result.toList()
+        assertEquals(0, resultList.size)
+    }
+
+    @Test
+    fun `getOrdersByContainerId should return flow of orders for specific container`() = runTest {
+        // Given
+        val containerId = "CONT-001"
+        val order1 = Order(id = 1L, purchaseNumber = "PO-001", bookingId = 100L)
+        val order2 = Order(id = 2L, purchaseNumber = "PO-002", bookingId = 100L)
+        val ordersFlow: Flow<Order> = flowOf(order1, order2)
+
+        coEvery { containerService.findOrdersByContainerId(containerId) }.returns(ordersFlow)
+
+        // When
+        val result = containerController.getOrdersByContainerId(containerId)
+
+        // Then
+        val resultList = result.toList()
+        assertEquals(2, resultList.size)
+        assertEquals(order1.id, resultList[0].id)
+        assertEquals(order1.purchaseNumber, resultList[0].purchaseNumber)
+        assertEquals(order2.id, resultList[1].id)
+        assertEquals(order2.purchaseNumber, resultList[1].purchaseNumber)
+    }
+
+    @Test
+    fun `getOrdersByContainerId should return empty flow when no orders exist for container`() = runTest {
+        // Given
+        val containerId = "CONT-001"
+        val emptyOrdersFlow: Flow<Order> = flowOf()
+
+        coEvery { containerService.findOrdersByContainerId(containerId) }.returns(emptyOrdersFlow)
+
+        // When
+        val result = containerController.getOrdersByContainerId(containerId)
 
         // Then
         val resultList = result.toList()

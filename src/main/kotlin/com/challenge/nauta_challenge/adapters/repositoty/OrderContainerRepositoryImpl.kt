@@ -30,4 +30,10 @@ class OrderContainerRepositoryImpl(
             .map { it.containerId }
             .asFlow()
     }
+
+    override fun findOrdersByContainerId(containerId: Long): Flow<Long> {
+        return orderContainerDao.findAllByContainerId(containerId)
+            .map { it.orderId }
+            .asFlow()
+    }
 }

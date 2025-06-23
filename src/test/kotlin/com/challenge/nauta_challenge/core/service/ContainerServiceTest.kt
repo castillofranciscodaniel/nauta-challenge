@@ -2,9 +2,13 @@ package com.challenge.nauta_challenge.core.service
 
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.model.Container
+import com.challenge.nauta_challenge.core.model.Order
+import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.model.User
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.core.repository.ContainerRepository
+import com.challenge.nauta_challenge.core.repository.OrderRepository
+import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -21,7 +25,17 @@ class ContainerServiceTest {
     private val containerRepository = mockk<ContainerRepository>()
     private val userLoggedService = mockk<UserLoggedService>()
     private val bookingRepository = mockk<BookingRepository>()
-    private val containerService = ContainerService(containerRepository, userLoggedService, bookingRepository)
+    private val orderRepository = mockk<OrderRepository>()
+    private val orderContainerRepository = mockk<OrderContainerRepository>()
+    private val invoiceService = mockk<InvoiceService>()
+    private val containerService = ContainerService(
+        containerRepository,
+        userLoggedService,
+        bookingRepository,
+        orderRepository,
+        orderContainerRepository,
+        invoiceService
+    )
 
     @Test
     fun devuelveContainerExistenteSiYaEstáAlmacenado(): Unit = runBlocking {
@@ -173,6 +187,56 @@ class ContainerServiceTest {
 
         // Act
         val result = containerService.findAllContainersForCurrentUser().toList()
+
+        // Then
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `findOrdersByContainerId returns orders for a specific container`() = runBlocking {
+        // Arrange
+        val userId = 100L
+        val containerId = "CONT-001"
+        val currentUser = User(id = userId, email = "user@example.com", password = "password")
+
+        val order1 = Order(id = 1L, purchaseNumber = "PO-001", bookingId = 1L)
+        val order2 = Order(id = 2L, purchaseNumber = "PO-002", bookingId = 1L)
+
+        val invoice1 = Invoice(id = 1L, invoiceNumber = "INV-001", orderId = order1.id!!)
+        val invoice2 = Invoice(id = 2L, invoiceNumber = "INV-002", orderId = order2.id!!)
+
+        coEvery { userLoggedService.getCurrentUserId() } returns currentUser
+        every { orderRepository.findOrdersByContainerIdAndUserId(containerId, userId) } returns flowOf(order1, order2)
+        every { invoiceService.findAllByOrderId(order1.id!!) } returns flowOf(invoice1)
+        every { invoiceService.findAllByOrderId(order2.id!!) } returns flowOf(invoice2)
+
+        // Act
+        val result = containerService.findOrdersByContainerId(containerId).toList()
+
+        // Then
+        assertEquals(2, result.size)
+        assertEquals(order1.id, result[0].id)
+        assertEquals(order1.purchaseNumber, result[0].purchaseNumber)
+        assertEquals(1, result[0].invoices.size)
+        assertEquals(invoice1.id, result[0].invoices[0].id)
+        assertEquals(order2.id, result[1].id)
+        assertEquals(order2.purchaseNumber, result[1].purchaseNumber)
+        assertEquals(1, result[1].invoices.size)
+        assertEquals(invoice2.id, result[1].invoices[0].id)
+    }
+
+    @Test
+    fun `findOrdersByContainerId returns empty flow when no orders found`() = runBlocking {
+        // Arrange
+        val userId = 100L
+        val containerId = "CONT-001"
+        val currentUser = User(id = userId, email = "user@example.com", password = "password")
+
+        coEvery { userLoggedService.getCurrentUserId() } returns currentUser
+        every { orderRepository.findOrdersByContainerIdAndUserId(containerId, userId) } returns flowOf()
+
+        // Act
+        val result = containerService.findOrdersByContainerId(containerId).toList()
 
         // Then
         assertEquals(0, result.size)
