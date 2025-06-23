@@ -1,4 +1,4 @@
-package com.challenge.nauta_challenge.infraestructure.delivery
+package com.challenge.nauta_challenge.infrastructure.delivery
 
 import com.challenge.nauta_challenge.core.service.AuthService
 import com.challenge.nauta_challenge.infrastructure.delivery.AuthController
