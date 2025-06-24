@@ -3,14 +3,12 @@ package com.challenge.nauta_challenge.infrastructure.delivery
 import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.service.OrderService
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Flux
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
 
 @SpringBootTest
@@ -21,75 +19,66 @@ class OrderControllerTest {
     private var orderController = OrderController(orderService)
 
     @Test
-    fun `getAllOrders should return flow of orders from service`() = runTest {
+    fun `getAllOrders should return flow of orders from service`() {
         // Given
         val order1 = Order(id = 1L, purchaseNumber = "PO-001", bookingId = 100L, invoices = listOf())
         val order2 = Order(id = 2L, purchaseNumber = "PO-002", bookingId = 100L, invoices = listOf())
-        val ordersFlow: Flow<Order> = flowOf(order1, order2)
 
-        coEvery { orderService.findAllOrdersForCurrentUser() }.returns(ordersFlow)
+        every { orderService.findAllOrdersForCurrentUser() }.returns(Flux.just(order1, order2))
 
-        // When
-        val result = orderController.getAllOrders()
-
-        // Then
-        val resultList = result.toList()
-        assertEquals(2, resultList.size)
-        assertEquals(order1.id, resultList[0].id)
-        assertEquals(order2.id, resultList[1].id)
+        // When & Then
+        StepVerifier.create(orderController.getAllOrders())
+            .assertNext { order ->
+                assertEquals(order1.id, order.id)
+                assertEquals(order1.purchaseNumber, order.purchaseNumber)
+            }
+            .assertNext { order ->
+                assertEquals(order2.id, order.id)
+                assertEquals(order2.purchaseNumber, order.purchaseNumber)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `getAllOrders should return empty flow when no orders exist`() = runTest {
+    fun `getAllOrders should return empty flow when no orders exist`() {
         // Given
-        val emptyOrdersFlow: Flow<Order> = flowOf()
+        every { orderService.findAllOrdersForCurrentUser() }.returns(Flux.empty())
 
-        coEvery { orderService.findAllOrdersForCurrentUser() }.returns(emptyOrdersFlow)
-
-        // When
-        val result = orderController.getAllOrders()
-
-        // Then
-        val resultList = result.toList()
-        assertEquals(0, resultList.size, "Should return empty list when no orders exist")
+        // When & Then
+        StepVerifier.create(orderController.getAllOrders())
+            .verifyComplete()
     }
 
     @Test
-    fun `getContainersByOrderId should return containers for specific order`() = runTest {
+    fun `getContainersByOrderId should return containers for specific order`() {
         // Given
         val purchaseNumber = "123L"
         val container1 = Container(id = 1L, containerNumber = "CONT-001", bookingId = 100L)
         val container2 = Container(id = 2L, containerNumber = "CONT-002", bookingId = 100L)
-        val containersFlow: Flow<Container> = flowOf(container1, container2)
 
-        coEvery { orderService.findContainersByOrderId(purchaseNumber) }.returns(containersFlow)
+        every { orderService.findContainersByOrderId(purchaseNumber) }.returns(Flux.just(container1, container2))
 
-        // When
-        val result = orderController.getContainersByOrderId(purchaseNumber)
-
-        // Then
-        val resultList = result.toList()
-        assertEquals(2, resultList.size)
-        assertEquals(container1.id, resultList[0].id)
-        assertEquals(container1.containerNumber, resultList[0].containerNumber)
-        assertEquals(container2.id, resultList[1].id)
-        assertEquals(container2.containerNumber, resultList[1].containerNumber)
+        // When & Then
+        StepVerifier.create(orderController.getContainersByOrderId(purchaseNumber))
+            .assertNext { container ->
+                assertEquals(container1.id, container.id)
+                assertEquals(container1.containerNumber, container.containerNumber)
+            }
+            .assertNext { container ->
+                assertEquals(container2.id, container.id)
+                assertEquals(container2.containerNumber, container.containerNumber)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `getContainersByOrderId should return empty flow when no containers are associated with order`() = runTest {
+    fun `getContainersByOrderId should return empty flow when no containers are associated with order`() {
         // Given
         val purchaseNumber = "123L"
-        val emptyContainersFlow: Flow<Container> = flowOf()
+        every { orderService.findContainersByOrderId(purchaseNumber) }.returns(Flux.empty())
 
-        coEvery { orderService.findContainersByOrderId(purchaseNumber) }.returns(emptyContainersFlow)
-
-        // When
-        val result = orderController.getContainersByOrderId(purchaseNumber)
-
-        // Then
-        val resultList = result.toList()
-        assertEquals(0, resultList.size)
+        // When & Then
+        StepVerifier.create(orderController.getContainersByOrderId(purchaseNumber))
+            .verifyComplete()
     }
-
 }

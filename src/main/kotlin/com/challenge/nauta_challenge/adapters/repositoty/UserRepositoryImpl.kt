@@ -6,9 +6,9 @@ import com.challenge.nauta_challenge.core.model.User
 import com.challenge.nauta_challenge.core.repository.UserRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.UserDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.UserEntity
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Mono
 
 @Component
 class UserRepositoryImpl(
@@ -16,53 +16,46 @@ class UserRepositoryImpl(
 ) : UserRepository {
     private val logger = LoggerFactory.getLogger(UserRepositoryImpl::class.java)
 
-    override suspend fun findByEmail(email: String): User? {
+    override fun findByEmail(email: String): Mono<User> {
         logger.debug("[findByEmail] Looking for user with email=$email")
 
-        return runCatching {
-            userDao.findByEmail(email)
-                .map { userEntity -> userEntity.toModel() }
-                .awaitSingleOrNull()
-                ?.also { logger.debug("[findByEmail] Found user: id=${it.id}, email=$email") }
-                ?: run {
+        return userDao.findByEmail(email)
+            .map { userEntity -> userEntity.toModel() }
+            .doOnSuccess { user ->
+                if (user != null) {
+                    logger.debug("[findByEmail] Found user: id=${user.id}, email=$email")
+                } else {
                     logger.debug("[findByEmail] User not found with email=$email")
-                    null
                 }
-        }.getOrElse { e ->
-            logger.warn("[findByEmail] Error while looking for user with email=$email", e)
-            throw RepositoryException("Error finding user by email", e)
-        }
+            }
+            .onErrorMap { e ->
+                logger.warn("[findByEmail] Error while looking for user with email=$email", e)
+                RepositoryException("Error finding user by email", e)
+            }
     }
 
-    override suspend fun existsByEmail(email: String): Boolean {
+    override fun existsByEmail(email: String): Mono<Boolean> {
         logger.debug("[existsByEmail] Checking if user exists with email=$email")
 
-        return runCatching {
-            userDao.existsByEmail(email)
-                .awaitSingleOrNull()
-                ?.also { exists -> logger.debug("[existsByEmail] User exists=$exists with email=$email") }
-                ?: run {
-                    logger.debug("[existsByEmail] Received empty response when checking email=$email, returning false")
-                    false
-                }
-        }.getOrElse { e ->
-            logger.warn("[existsByEmail] Error checking if user exists with email=$email", e)
-            throw RepositoryException("Error checking if user exists", e)
-        }
+        return userDao.existsByEmail(email)
+            .defaultIfEmpty(false)
+            .doOnSuccess { exists -> logger.debug("[existsByEmail] User exists=$exists with email=$email") }
+            .onErrorMap { e ->
+                logger.warn("[existsByEmail] Error checking if user exists with email=$email", e)
+                RepositoryException("Error checking if user exists", e)
+            }
     }
 
-    override suspend fun save(user: User): User {
+    override fun save(user: User): Mono<User> {
         logger.info("[save] Attempting to save user: email=${user.email}")
 
-        return runCatching {
-            userDao.save(UserEntity.fromModel(user))
-                .awaitSingleOrNull()
-                ?.toModel()
-                ?.also { logger.info("[save] Successfully saved user: id=${it.id}, email=${it.email}") }
-                ?: throw ModelNotSavedException("Failed to save user")
-        }.getOrElse { e ->
-            logger.error("[save] Error while saving user: email=${user.email}", e)
-            throw ModelNotSavedException("Failed to save user: ${e.message}")
-        }
+        return userDao.save(UserEntity.fromModel(user))
+            .map { it.toModel() }
+            .doOnSuccess { logger.info("[save] Successfully saved user: id=${it.id}, email=${it.email}") }
+            .switchIfEmpty(Mono.error(ModelNotSavedException("Failed to save user")))
+            .onErrorMap { e ->
+                logger.error("[save] Error while saving user: email=${user.email}", e)
+                ModelNotSavedException("Failed to save user: ${e.message}")
+            }
     }
 }

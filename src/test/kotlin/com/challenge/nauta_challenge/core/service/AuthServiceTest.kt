@@ -5,16 +5,15 @@ import com.challenge.nauta_challenge.core.repository.UserRepository
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.LoginRequestDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.RegisterRequestDto
 import com.challenge.nauta_challenge.infrastructure.security.JwtTokenProvider
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 @SpringBootTest
 class AuthServiceTest {
@@ -25,81 +24,85 @@ class AuthServiceTest {
     private val authService = AuthService(userRepository, passwordEncoder, jwtTokenProvider)
 
     @Test
-    fun registerUserSuccessfully() = runTest {
+    fun registerUserSuccessfully() {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
         val encodedPassword = "encodedPassword"
         val userWithId = User(id = 1, email = "test@example.com", password = encodedPassword)
         val token = "jwt-token"
 
-        coEvery { userRepository.existsByEmail("test@example.com") } returns false
+        every { userRepository.existsByEmail("test@example.com") } returns Mono.just(false)
         every { passwordEncoder.encode("password") } returns encodedPassword
-        coEvery { userRepository.save(any()) } returns userWithId
+        every { userRepository.save(any()) } returns Mono.just(userWithId)
         every { jwtTokenProvider.generateToken("test@example.com", 1) } returns token
 
-        // Act
-        val result = authService.register(request)
-
-        // Assert
-        assertEquals("jwt-token", result.token)
-        assertEquals("test@example.com", result.email)
+        // Act & Assert
+        StepVerifier.create(authService.register(request))
+            .assertNext { result ->
+                assertEquals("jwt-token", result.token)
+                assertEquals("test@example.com", result.email)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenEmailAlreadyExists(): Unit = runTest {
+    fun throwsExceptionWhenEmailAlreadyExists() {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
-        coEvery { userRepository.existsByEmail("test@example.com") } returns true
+        every { userRepository.existsByEmail("test@example.com") } returns Mono.just(true)
 
         // Act & Assert
-        assertFailsWith<IllegalArgumentException>("Email is already registered") {
-            authService.register(request)
-        }
+        StepVerifier.create(authService.register(request))
+            .expectErrorMatches { ex ->
+                ex is IllegalArgumentException && ex.message == "Email is already registered"
+            }
+            .verify()
     }
 
     @Test
-    fun loginSuccessfully() = runTest {
+    fun loginSuccessfully() {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         val user = User(id = 1, email = "test@example.com", password = "encodedPassword")
         val token = "jwt-token"
 
-        coEvery { userRepository.findByEmail("test@example.com") } returns user
+        every { userRepository.findByEmail("test@example.com") } returns Mono.just(user)
         every { passwordEncoder.matches("password", "encodedPassword") } returns true
         every { jwtTokenProvider.generateToken("test@example.com", 1) } returns token
 
-        // Act
-        val result = authService.login(request)
-
-        // Assert
-        assertEquals("jwt-token", result.token)
-        assertEquals("test@example.com", result.email)
+        // Act & Assert
+        StepVerifier.create(authService.login(request))
+            .assertNext { result ->
+                assertEquals("jwt-token", result.token)
+                assertEquals("test@example.com", result.email)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenUserDoesNotExist(): Unit = runTest {
+    fun throwsExceptionWhenUserDoesNotExist() {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
-        coEvery { userRepository.findByEmail("test@example.com") } returns null
+        every { userRepository.findByEmail("test@example.com") } returns Mono.empty()
 
         // Act & Assert
-        assertFailsWith<BadCredentialsException>("Incorrect email or password") {
-            authService.login(request)
-        }
+        StepVerifier.create(authService.login(request))
+            .expectError(BadCredentialsException::class.java)
+            .verify()
     }
 
     @Test
-    fun throwsExceptionWhenPasswordIsIncorrect(): Unit = runTest {
+    fun throwsExceptionWhenPasswordIsIncorrect() {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         val user = User(id = 1, email = "test@example.com", password = "encodedPassword")
 
-        coEvery { userRepository.findByEmail("test@example.com") } returns user
+        every { userRepository.findByEmail("test@example.com") } returns Mono.just(user)
         every { passwordEncoder.matches("password", "encodedPassword") } returns false
 
         // Act & Assert
-        assertFailsWith<BadCredentialsException>("Incorrect email or password") {
-            authService.login(request)
-        }
+        StepVerifier.create(authService.login(request))
+            .expectError(BadCredentialsException::class.java)
+            .verify()
     }
 }

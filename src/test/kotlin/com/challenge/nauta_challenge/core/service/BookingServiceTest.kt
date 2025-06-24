@@ -2,13 +2,13 @@ package com.challenge.nauta_challenge.core.service
 
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.repository.BookingRepository
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
-import kotlin.test.assertSame
 
 @SpringBootTest
 class BookingServiceTest {
@@ -17,7 +17,7 @@ class BookingServiceTest {
     private val bookingService = BookingService(bookingRepository)
 
     @Test
-    fun devuelveBookingExistenteSiYaEstáAlmacenado(): Unit = runTest {
+    fun returnsExistingBookingIfAlreadyStored() {
         // Arrange
         val userId = 1L
         val bookingNumber = "B12345"
@@ -32,20 +32,21 @@ class BookingServiceTest {
             userId = userId
         )
         
-        coEvery { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId) } returns existingBooking
-        
-        // Act
-        val result = bookingService.findOrSaveBooking(booking, userId)
-        
-        // Assert
-        assertEquals(existingBooking.id, result.id)
-        assertEquals(bookingNumber, result.bookingNumber)
-        assertEquals(userId, result.userId)
-        assertSame(existingBooking, result)
+        every { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId) } returns Mono.just(existingBooking)
+        // Al encontrar una reserva existente, no debería intentar guardarla
+
+        // Act & Assert
+        StepVerifier.create(bookingService.findOrSaveBooking(booking, userId))
+            .assertNext { result ->
+                assertEquals(existingBooking.id, result.id)
+                assertEquals(existingBooking.bookingNumber, result.bookingNumber)
+                assertEquals(existingBooking.userId, result.userId)
+            }
+            .verifyComplete()
     }
     
     @Test
-    fun guardarBookingCuandoNoExiste(): Unit = runTest {
+    fun savesNewBookingWhenNotFound() {
         // Arrange
         val userId = 1L
         val bookingNumber = "B12345"
@@ -60,16 +61,16 @@ class BookingServiceTest {
             userId = userId
         )
         
-        coEvery { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId) } returns null
-        coEvery { bookingRepository.save(booking.copy(userId = userId)) } returns savedBooking
-        
-        // Act
-        val result = bookingService.findOrSaveBooking(booking, userId)
-        
-        // Assert
-        assertEquals(savedBooking.id, result.id)
-        assertEquals(bookingNumber, result.bookingNumber)
-        assertEquals(userId, result.userId)
-        assertSame(savedBooking, result)
+        every { bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId) } returns Mono.empty()
+        every { bookingRepository.save(booking.copy(userId = userId)) } returns Mono.just(savedBooking)
+
+        // Act & Assert
+        StepVerifier.create(bookingService.findOrSaveBooking(booking, userId))
+            .assertNext { result ->
+                assertEquals(savedBooking.id, result.id)
+                assertEquals(savedBooking.bookingNumber, result.bookingNumber)
+                assertEquals(savedBooking.userId, result.userId)
+            }
+            .verifyComplete()
     }
 }

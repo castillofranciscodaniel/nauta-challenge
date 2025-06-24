@@ -4,17 +4,17 @@ import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.service.BookingSaveOrchestrationService
-import com.challenge.nauta_challenge.infrastructure.delivery.BookingController
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.BookingDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.ContainerDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.OrderDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.InvoiceDto
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpStatus
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -25,7 +25,7 @@ class BookingControllerTest {
     private val bookingController = BookingController(bookingSaveOrchestrationService)
 
     @Test
-    fun `createBooking should save booking and return created response`() = runTest {
+    fun `createBooking should save booking and return created response`() {
         // Given
         val bookingDto = BookingDto(
             booking = "BOOK-123",
@@ -53,21 +53,22 @@ class BookingControllerTest {
             ))
         )
 
-        coEvery {
+        every {
             bookingSaveOrchestrationService.saveBooking(any())
-        } returns expectedSavedBooking
+        } returns Mono.just(expectedSavedBooking)
 
-        // When
-        val response = bookingController.createBooking(bookingDto)
-
-        // Then
-        assertEquals(HttpStatus.CREATED, response.statusCode)
-        assertNotNull(response.body)
-        assertEquals(expectedSavedBooking, response.body)
+        // When & Then
+        StepVerifier.create(bookingController.createBooking(bookingDto))
+            .assertNext { response ->
+                assertEquals(HttpStatus.CREATED, response.statusCode)
+                assertNotNull(response.body)
+                assertEquals(expectedSavedBooking, response.body)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `createBooking should handle empty containers and orders`() = runTest {
+    fun `createBooking should handle empty containers and orders`() {
         // Given
         val bookingDto = BookingDto(
             booking = "BOOK-456"
@@ -81,16 +82,17 @@ class BookingControllerTest {
             orders = emptyList()
         )
 
-        coEvery {
+        every {
             bookingSaveOrchestrationService.saveBooking(any())
-        } returns expectedSavedBooking
+        } returns Mono.just(expectedSavedBooking)
 
-        // When
-        val response = bookingController.createBooking(bookingDto)
-
-        // Then
-        assertEquals(HttpStatus.CREATED, response.statusCode)
-        assertNotNull(response.body)
-        assertEquals(expectedSavedBooking, response.body)
+        // When & Then
+        StepVerifier.create(bookingController.createBooking(bookingDto))
+            .assertNext { response ->
+                assertEquals(HttpStatus.CREATED, response.statusCode)
+                assertNotNull(response.body)
+                assertEquals(expectedSavedBooking, response.body)
+            }
+            .verifyComplete()
     }
 }

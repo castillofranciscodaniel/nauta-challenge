@@ -1,15 +1,15 @@
 package com.challenge.nauta_challenge.infrastructure.delivery
 
 import com.challenge.nauta_challenge.core.service.AuthService
-import com.challenge.nauta_challenge.infrastructure.delivery.AuthController
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.AuthResponseDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.LoginRequestDto
 import com.challenge.nauta_challenge.infrastructure.delivery.dto.RegisterRequestDto
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
 
 @SpringBootTest
@@ -19,7 +19,7 @@ class AuthControllerTest {
     private val authController = AuthController(authService)
 
     @Test
-    fun registroDevuelveRespuestaCorrectaCuandoExitoso(): Unit = runBlocking {
+    fun registroDevuelveRespuestaCorrectaCuandoExitoso() {
         // Arrange
         val request = RegisterRequestDto(
             email = "juan@example.com",
@@ -31,18 +31,19 @@ class AuthControllerTest {
             email = "juan@example.com"
         )
 
-        coEvery { authService.register(request) } returns expectedResponse
+        every { authService.register(request) } returns Mono.just(expectedResponse)
 
-        // Act
-        val result = authController.register(request)
-
-        // Assert
-        assertEquals(200, result.statusCodeValue)
-        assertEquals(expectedResponse, result.body)
+        // Act & Assert
+        StepVerifier.create(authController.register(request))
+            .assertNext { response ->
+                assertEquals(200, response.statusCodeValue)
+                assertEquals(expectedResponse, response.body)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun loginDevuelveRespuestaCorrectaCuandoExitoso(): Unit = runBlocking {
+    fun loginDevuelveRespuestaCorrectaCuandoExitoso() {
         // Arrange
         val request = LoginRequestDto(
             email = "juan@example.com",
@@ -54,13 +55,14 @@ class AuthControllerTest {
             email = "juan@example.com"
         )
 
-        coEvery { authService.login(request) } returns expectedResponse
+        every { authService.login(request) } returns Mono.just(expectedResponse)
 
-        // Act
-        val result = authController.login(request)
-
-        // Assert
-        assertEquals(200, result.statusCodeValue)
-        assertEquals(expectedResponse, result.body)
+        // Act & Assert
+        StepVerifier.create(authController.login(request))
+            .assertNext { response ->
+                assertEquals(200, response.statusCodeValue)
+                assertEquals(expectedResponse, response.body)
+            }
+            .verifyComplete()
     }
 }

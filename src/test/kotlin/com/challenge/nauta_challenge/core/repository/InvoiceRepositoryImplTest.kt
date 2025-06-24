@@ -7,14 +7,12 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.InvoiceDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.InvoiceEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 @SpringBootTest
 class InvoiceRepositoryImplTest {
@@ -23,103 +21,104 @@ class InvoiceRepositoryImplTest {
     private val invoiceRepository: InvoiceRepository = InvoiceRepositoryImpl(invoiceDao)
 
     @Test
-    fun saveInvoiceSuccessfully() = runTest {
-        val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
-        val invoiceEntity = InvoiceEntity.fromModel(invoice)
+    fun saveInvoiceSuccessfully() {
+        val invoice = Invoice(id = null, invoiceNumber = "INV-001", orderId = 1)
+        val invoiceEntity = InvoiceEntity(id = null, invoiceNumber = "INV-001", orderId = 1)
 
         every { invoiceDao.save(invoiceEntity) }.returns(Mono.just(invoiceEntity.copy(id = 1)))
 
-        val result = invoiceRepository.save(invoice)
-
-        assertEquals(1, result.id)
-        assertEquals("FAC123", result.invoiceNumber)
-        assertEquals(1, result.orderId)
+        StepVerifier.create(invoiceRepository.save(invoice))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("INV-001", result.invoiceNumber)
+                assertEquals(1, result.orderId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenInvoiceNotSaved(): Unit = runTest {
-        val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
-        val invoiceEntity = InvoiceEntity.fromModel(invoice)
+    fun throwsExceptionWhenInvoiceNotSaved() {
+        val invoice = Invoice(id = null, invoiceNumber = "INV-001", orderId = 1)
+        val invoiceEntity = InvoiceEntity(id = null, invoiceNumber = "INV-001", orderId = 1)
 
         every { invoiceDao.save(invoiceEntity) }.returns(Mono.empty())
 
-        assertFailsWith<ModelNotSavedException>("Invoice not saved") {
-            invoiceRepository.save(invoice)
-        }
+        StepVerifier.create(invoiceRepository.save(invoice))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun `findAllByOrderId returns flow of invoices`() = runTest {
+    fun `findAllByOrderId returns flow of invoices`() {
         // Arrange
         val orderId = 1L
-        val invoiceEntity1 = InvoiceEntity(id = 1, invoiceNumber = "INV-123", orderId = orderId)
-        val invoiceEntity2 = InvoiceEntity(id = 2, invoiceNumber = "INV-456", orderId = orderId)
+        val invoiceEntity1 = InvoiceEntity(id = 1, invoiceNumber = "INV-001", orderId = orderId)
+        val invoiceEntity2 = InvoiceEntity(id = 2, invoiceNumber = "INV-002", orderId = orderId)
 
-        every { invoiceDao.findAllByOrderId(orderId) } returns
-                Flux.just(invoiceEntity1, invoiceEntity2)
+        every { invoiceDao.findAllByOrderId(orderId) }.returns(Flux.just(invoiceEntity1, invoiceEntity2))
 
-        // Act
-        val result = invoiceRepository.findAllByOrderId(orderId)
-        val invoices = result.toList()
-
-        // Assert
-        assertEquals(2, invoices.size)
-        assertEquals(1L, invoices[0].id)
-        assertEquals("INV-123", invoices[0].invoiceNumber)
-        assertEquals(orderId, invoices[0].orderId)
-        assertEquals(2L, invoices[1].id)
-        assertEquals("INV-456", invoices[1].invoiceNumber)
-        assertEquals(orderId, invoices[1].orderId)
+        // Act & Assert
+        StepVerifier.create(invoiceRepository.findAllByOrderId(orderId))
+            .assertNext { invoice ->
+                assertEquals(1, invoice.id)
+                assertEquals("INV-001", invoice.invoiceNumber)
+                assertEquals(orderId, invoice.orderId)
+            }
+            .assertNext { invoice ->
+                assertEquals(2, invoice.id)
+                assertEquals("INV-002", invoice.invoiceNumber)
+                assertEquals(orderId, invoice.orderId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `findAllByOrderId returns empty flow when no invoices found`() = runTest {
+    fun `findAllByOrderId returns empty flow when no invoices found`() {
         // Arrange
         val orderId = 1L
 
-        every { invoiceDao.findAllByOrderId(orderId) } returns
-                Flux.empty()
+        every { invoiceDao.findAllByOrderId(orderId) }.returns(Flux.empty())
 
-        // Act
-        val result = invoiceRepository.findAllByOrderId(orderId)
-        val invoices = result.toList()
-
-        // Assert
-        assertEquals(0, invoices.size)
+        // Act & Assert
+        StepVerifier.create(invoiceRepository.findAllByOrderId(orderId))
+            .verifyComplete()
     }
 
     @Test
-    fun `findByInvoiceNumberAndOrderId returns invoice when found`() = runTest {
+    fun `findByInvoiceNumberAndOrderId returns invoice when found`() {
         // Arrange
-        val invoiceNumber = "INV-123"
+        val invoiceNumber = "INV-001"
         val orderId = 1L
-        val invoiceEntity = InvoiceEntity(id = 1, invoiceNumber = invoiceNumber, orderId = orderId)
+        val invoiceEntity = InvoiceEntity(
+            id = 1,
+            invoiceNumber = invoiceNumber,
+            orderId = orderId
+        )
 
-        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) } returns
-                Mono.just(invoiceEntity)
+        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) }
+            .returns(Mono.just(invoiceEntity))
 
-        // Act
-        val result = invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId)
-
-        // Assert
-        assertEquals(1L, result?.id)
-        assertEquals(invoiceNumber, result?.invoiceNumber)
-        assertEquals(orderId, result?.orderId)
+        // Act & Assert
+        StepVerifier.create(invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId))
+            .assertNext { invoice ->
+                assertEquals(1, invoice.id)
+                assertEquals(invoiceNumber, invoice.invoiceNumber)
+                assertEquals(orderId, invoice.orderId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `findByInvoiceNumberAndOrderId returns null when not found`() = runTest {
+    fun `findByInvoiceNumberAndOrderId returns empty when not found`() {
         // Arrange
-        val invoiceNumber = "INV-123"
+        val invoiceNumber = "INV-001"
         val orderId = 1L
 
-        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) } returns
-                Mono.empty()
+        every { invoiceDao.findByInvoiceNumberAndOrderId(invoiceNumber, orderId) }
+            .returns(Mono.empty())
 
-        // Act
-        val result = invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId)
-
-        // Assert
-        assertEquals(null, result)
+        // Act & Assert
+        StepVerifier.create(invoiceRepository.findByInvoiceNumberAndOrderId(invoiceNumber, orderId))
+            .verifyComplete()
     }
 }

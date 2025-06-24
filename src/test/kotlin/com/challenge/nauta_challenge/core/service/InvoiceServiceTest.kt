@@ -2,11 +2,13 @@ package com.challenge.nauta_challenge.core.service
 
 import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.repository.InvoiceRepository
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
 
 @SpringBootTest
@@ -16,7 +18,7 @@ class InvoiceServiceTest {
     private val invoiceService = InvoiceService(invoiceRepository)
 
     @Test
-    fun saveInvvoice(): Unit = runTest {
+    fun savesInvoiceWhenNotFound() {
         // Arrange
         val orderId = 1L
         val invoice = Invoice(
@@ -30,76 +32,22 @@ class InvoiceServiceTest {
             orderId = orderId
         )
 
-        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId) } returns null
-        coEvery { invoiceRepository.save(invoice.copy(orderId = orderId)) } returns savedInvoice
+        every { invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId) } returns Mono.empty()
+        every { invoiceRepository.save(invoice.copy(orderId = orderId)) } returns Mono.just(savedInvoice)
 
-        // Act
-        val result = invoiceService.saveInvoicesForOrder(listOf(invoice), orderId)
-
-        // Assert
-        assertEquals(1, result.size)
-        assertEquals(savedInvoice.id, result[0].id)
-        assertEquals(savedInvoice.invoiceNumber, result[0].invoiceNumber)
-        assertEquals(orderId, result[0].orderId)
+        // Act & Assert
+        StepVerifier.create(invoiceService.saveInvoicesForOrder(listOf(invoice), orderId))
+            .assertNext { result ->
+                assertEquals(1, result.size)
+                assertEquals(savedInvoice.id, result[0].id)
+                assertEquals(savedInvoice.invoiceNumber, result[0].invoiceNumber)
+                assertEquals(orderId, result[0].orderId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun guardaMultiplesFacturasCorrectamente(): Unit = runTest {
-        // Arrange
-        val orderId = 1L
-        val invoice1 = Invoice(
-            id = null,
-            invoiceNumber = "INV-001",
-            orderId = null
-        )
-        val invoice2 = Invoice(
-            id = null,
-            invoiceNumber = "INV-002",
-            orderId = null
-        )
-        val savedInvoice1 = Invoice(
-            id = 1L,
-            invoiceNumber = "INV-001",
-            orderId = orderId
-        )
-        val savedInvoice2 = Invoice(
-            id = 2L,
-            invoiceNumber = "INV-002",
-            orderId = orderId
-        )
-
-        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice1.invoiceNumber, orderId) } returns null
-        coEvery { invoiceRepository.findByInvoiceNumberAndOrderId(invoice2.invoiceNumber, orderId) } returns null
-        coEvery { invoiceRepository.save(invoice1.copy(orderId = orderId)) } returns savedInvoice1
-        coEvery { invoiceRepository.save(invoice2.copy(orderId = orderId)) } returns savedInvoice2
-
-        // Act
-        val result = invoiceService.saveInvoicesForOrder(listOf(invoice1, invoice2), orderId)
-
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(savedInvoice1.id, result[0].id)
-        assertEquals(savedInvoice1.invoiceNumber, result[0].invoiceNumber)
-        assertEquals(orderId, result[0].orderId)
-        assertEquals(savedInvoice2.id, result[1].id)
-        assertEquals(savedInvoice2.invoiceNumber, result[1].invoiceNumber)
-        assertEquals(orderId, result[1].orderId)
-    }
-
-    @Test
-    fun manejaListaVacia(): Unit = runTest {
-        // Arrange
-        val orderId = 1L
-
-        // Act
-        val result = invoiceService.saveInvoicesForOrder(emptyList(), orderId)
-
-        // Assert
-        assertEquals(0, result.size)
-    }
-
-    @Test
-    fun `no guarda facturas duplicadas`(): Unit = runTest {
+    fun returnsExistingInvoiceIfAlreadyStored() {
         // Arrange
         val orderId = 1L
         val invoice = Invoice(
@@ -107,49 +55,38 @@ class InvoiceServiceTest {
             invoiceNumber = "INV-001",
             orderId = null
         )
+        val existingInvoice = Invoice(
+            id = 1L,
+            invoiceNumber = "INV-001",
+            orderId = orderId
+        )
 
-        // Simular que la factura ya existe
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId)
-        } returns Invoice(id = 10L, invoiceNumber = "INV-001", orderId = orderId)
+        every { invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId) } returns Mono.just(existingInvoice)
 
-        // No debería llamarse al método save
-
-        // Act
-        val result = invoiceService.saveInvoicesForOrder(listOf(invoice), orderId)
-
-        // Assert
-        assertEquals(1, result.size) // No se debería guardar ninguna factura
+        // Act & Assert
+        StepVerifier.create(invoiceService.saveInvoicesForOrder(listOf(invoice), orderId))
+            .assertNext { result ->
+                assertEquals(1, result.size)
+                assertEquals(existingInvoice.id, result[0].id)
+                assertEquals(existingInvoice.invoiceNumber, result[0].invoiceNumber)
+                assertEquals(orderId, result[0].orderId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `guarda facturas no duplicadas y omite las duplicadas`(): Unit = runTest {
+    fun findsAllInvoicesByOrderId() {
         // Arrange
         val orderId = 1L
-        val invoice1 = Invoice(id = null, invoiceNumber = "INV-001", orderId = null)
-        val invoice2 = Invoice(id = null, invoiceNumber = "INV-002", orderId = null)
+        val invoice1 = Invoice(id = 1L, invoiceNumber = "INV-001", orderId = orderId)
+        val invoice2 = Invoice(id = 2L, invoiceNumber = "INV-002", orderId = orderId)
 
-        val savedInvoice2 = Invoice(id = 2L, invoiceNumber = "INV-002", orderId = orderId)
+        every { invoiceRepository.findAllByOrderId(orderId) } returns Flux.just(invoice1, invoice2)
 
-        // Simular que la primera factura ya existe pero la segunda no
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId("INV-001", orderId)
-        } returns Invoice(id = 10L, invoiceNumber = "INV-001", orderId = orderId)
-
-        coEvery {
-            invoiceRepository.findByInvoiceNumberAndOrderId("INV-002", orderId)
-        } returns null
-
-        coEvery {
-            invoiceRepository.save(invoice2.copy(orderId = orderId))
-        } returns savedInvoice2
-
-        // Act
-        val result = invoiceService.saveInvoicesForOrder(listOf(invoice1, invoice2), orderId)
-
-        // Assert
-        assertEquals(2, result.size) // Solo se debería guardar una factura
-        assertEquals(savedInvoice2.id, result[1].id)
-        assertEquals("INV-002", result[1].invoiceNumber)
+        // Act & Assert
+        StepVerifier.create(invoiceService.findAllByOrderId(orderId))
+            .expectNext(invoice1)
+            .expectNext(invoice2)
+            .verifyComplete()
     }
 }

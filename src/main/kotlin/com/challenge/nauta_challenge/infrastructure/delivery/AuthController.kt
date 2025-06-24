@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.slf4j.LoggerFactory
+import reactor.core.publisher.Mono
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,18 +20,30 @@ class AuthController(
     private val logger = LoggerFactory.getLogger(AuthController::class.java)
 
     @PostMapping("/register")
-    suspend fun register(@RequestBody request: RegisterRequestDto): ResponseEntity<AuthResponseDto> {
+    fun register(@RequestBody request: RegisterRequestDto): Mono<ResponseEntity<AuthResponseDto>> {
         logger.info("[register] Registration request received for user: ${request.email}")
-        val response = authService.register(request)
-        logger.info("[register] Registration successful for user: ${request.email}")
-        return ResponseEntity.ok(response)
+
+        return authService.register(request)
+            .map { response ->
+                logger.info("[register] Registration successful for user: ${request.email}")
+                ResponseEntity.ok(response)
+            }
+            .doOnError { error ->
+                logger.error("[register] Registration failed for user: ${request.email}", error)
+            }
     }
 
     @PostMapping("/login")
-    suspend fun login(@RequestBody request: LoginRequestDto): ResponseEntity<AuthResponseDto> {
+    fun login(@RequestBody request: LoginRequestDto): Mono<ResponseEntity<AuthResponseDto>> {
         logger.info("[login] Login request received for user: ${request.email}")
-        val response = authService.login(request)
-        logger.info("[login] Login successful for user: ${request.email}")
-        return ResponseEntity.ok(response)
+
+        return authService.login(request)
+            .map { response ->
+                logger.info("[login] Login successful for user: ${request.email}")
+                ResponseEntity.ok(response)
+            }
+            .doOnError { error ->
+                logger.error("[login] Login failed for user: ${request.email}", error)
+            }
     }
 }

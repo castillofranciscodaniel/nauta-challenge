@@ -4,18 +4,19 @@ import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.model.OrderContainer
 import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.verify
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 
 @SpringBootTest
 class OrderContainerAssociationServiceTest {
 
     @Test
-    fun createAssociationsCorrectlyOneOrderToMultipleContainers(): Unit = runTest {
+    fun createAssociationsCorrectlyOneOrderToMultipleContainers() {
         // Arrange
         val orderContainerRepository = mockk<OrderContainerRepository>()
         val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
@@ -34,27 +35,28 @@ class OrderContainerAssociationServiceTest {
         val orderContainer1 = OrderContainer(orderId = orderId, containerId = containerId1)
         val orderContainer2 = OrderContainer(orderId = orderId, containerId = containerId2)
 
-        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) } returns false
-        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) } returns false
-        coEvery { orderContainerRepository.save(orderId, containerId1) } returns orderContainer1
-        coEvery { orderContainerRepository.save(orderId, containerId2) } returns orderContainer2
+        every { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) } returns Mono.just(false)
+        every { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) } returns Mono.just(false)
+        every { orderContainerRepository.save(orderId, containerId1) } returns Mono.just(orderContainer1)
+        every { orderContainerRepository.save(orderId, containerId2) } returns Mono.just(orderContainer2)
 
-        // Act
-        orderContainerAssociationService.createAssociations(
+        // Act & Assert
+        StepVerifier.create(orderContainerAssociationService.createAssociations(
             orders = orders,
             containers = containers,
             bookingNumber = bookingNumber
-        )
+        ))
+        .verifyComplete()
 
-        // Assert
-        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) }
-        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) }
-        coVerify(exactly = 1) { orderContainerRepository.save(orderId, containerId1) }
-        coVerify(exactly = 1) { orderContainerRepository.save(orderId, containerId2) }
+        // Verify repository calls
+        verify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId1) }
+        verify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId2) }
+        verify(exactly = 1) { orderContainerRepository.save(orderId, containerId1) }
+        verify(exactly = 1) { orderContainerRepository.save(orderId, containerId2) }
     }
 
     @Test
-    fun createAssociationsCorrectlyMultipleOrdersToOneContainer(): Unit = runTest {
+    fun createAssociationsCorrectlyMultipleOrdersToOneContainer() {
         // Arrange
         val orderContainerRepository = mockk<OrderContainerRepository>()
         val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
@@ -73,27 +75,28 @@ class OrderContainerAssociationServiceTest {
         val orderContainer1 = OrderContainer(orderId = orderId1, containerId = containerId)
         val orderContainer2 = OrderContainer(orderId = orderId2, containerId = containerId)
 
-        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) } returns false
-        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) } returns false
-        coEvery { orderContainerRepository.save(orderId1, containerId) } returns orderContainer1
-        coEvery { orderContainerRepository.save(orderId2, containerId) } returns orderContainer2
+        every { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) } returns Mono.just(false)
+        every { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) } returns Mono.just(false)
+        every { orderContainerRepository.save(orderId1, containerId) } returns Mono.just(orderContainer1)
+        every { orderContainerRepository.save(orderId2, containerId) } returns Mono.just(orderContainer2)
 
-        // Act
-        orderContainerAssociationService.createAssociations(
+        // Act & Assert
+        StepVerifier.create(orderContainerAssociationService.createAssociations(
             orders = orders,
             containers = containers,
             bookingNumber = bookingNumber
-        )
+        ))
+        .verifyComplete()
 
-        // Assert
-        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) }
-        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) }
-        coVerify(exactly = 1) { orderContainerRepository.save(orderId1, containerId) }
-        coVerify(exactly = 1) { orderContainerRepository.save(orderId2, containerId) }
+        // Verify repository calls
+        verify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId1, containerId) }
+        verify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId2, containerId) }
+        verify(exactly = 1) { orderContainerRepository.save(orderId1, containerId) }
+        verify(exactly = 1) { orderContainerRepository.save(orderId2, containerId) }
     }
 
     @Test
-    fun doNotCreateAssociationIfAlreadyExists(): Unit = runTest {
+    fun doNotCreateAssociationIfAlreadyExists() {
         // Arrange
         val orderContainerRepository = mockk<OrderContainerRepository>()
         val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
@@ -105,22 +108,23 @@ class OrderContainerAssociationServiceTest {
         val orders = listOf(Order(id = orderId, purchaseNumber = "PO123", bookingId = 10, invoices = emptyList()))
         val containers = listOf(Container(id = containerId, containerNumber = "CONT1", bookingId = 10))
 
-        coEvery { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) } returns true
+        every { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) } returns Mono.just(true)
 
-        // Act
-        orderContainerAssociationService.createAssociations(
+        // Act & Assert
+        StepVerifier.create(orderContainerAssociationService.createAssociations(
             orders = orders,
             containers = containers,
             bookingNumber = bookingNumber
-        )
+        ))
+        .verifyComplete()
 
-        // Assert
-        coVerify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) }
-        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
+        // Verify repository calls
+        verify(exactly = 1) { orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId) }
+        verify(exactly = 0) { orderContainerRepository.save(any(), any()) }
     }
 
     @Test
-    fun doNotCreateAssociationsWhenNoOrders(): Unit = runTest {
+    fun doNotCreateAssociationsWhenNoOrders() {
         // Arrange
         val orderContainerRepository = mockk<OrderContainerRepository>()
         val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
@@ -131,20 +135,21 @@ class OrderContainerAssociationServiceTest {
         val orders = emptyList<Order>()
         val containers = listOf(Container(id = containerId, containerNumber = "CONT1", bookingId = 10))
 
-        // Act
-        orderContainerAssociationService.createAssociations(
+        // Act & Assert
+        StepVerifier.create(orderContainerAssociationService.createAssociations(
             orders = orders,
             containers = containers,
             bookingNumber = bookingNumber
-        )
+        ))
+        .verifyComplete()
 
-        // Assert
-        coVerify(exactly = 0) { orderContainerRepository.existsByOrderIdAndContainerId(any(), any()) }
-        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
+        // Verify repository calls
+        verify(exactly = 0) { orderContainerRepository.existsByOrderIdAndContainerId(any(), any()) }
+        verify(exactly = 0) { orderContainerRepository.save(any(), any()) }
     }
 
     @Test
-    fun doNotCreateAssociationsWhenNoContainers(): Unit = runTest {
+    fun doNotCreateAssociationsWhenNoContainers() {
         // Arrange
         val orderContainerRepository = mockk<OrderContainerRepository>()
         val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
@@ -155,14 +160,15 @@ class OrderContainerAssociationServiceTest {
         val orders = listOf(Order(id = orderId, purchaseNumber = "PO123", bookingId = 10, invoices = emptyList()))
         val containers = emptyList<Container>()
 
-        // Act
-        orderContainerAssociationService.createAssociations(
+        // Act & Assert
+        StepVerifier.create(orderContainerAssociationService.createAssociations(
             orders = orders,
             containers = containers,
             bookingNumber = bookingNumber
-        )
+        ))
+        .verifyComplete()
 
-        // Assert
-        coVerify(exactly = 0) { orderContainerRepository.save(any(), any()) }
+        // Verify repository calls
+        verify(exactly = 0) { orderContainerRepository.save(any(), any()) }
     }
 }

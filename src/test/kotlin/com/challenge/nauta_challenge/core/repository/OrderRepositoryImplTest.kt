@@ -7,15 +7,12 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 @SpringBootTest
 class OrderRepositoryImplTest {
@@ -24,56 +21,59 @@ class OrderRepositoryImplTest {
     private val orderRepository: OrderRepository = OrderRepositoryImpl(orderDao)
 
     @Test
-    fun savesOrderSuccessfully() = runTest {
+    fun savesOrderSuccessfully() {
         val order = Order(id = null, purchaseNumber = "PO123", bookingId = 1, invoices = emptyList())
         val orderEntity = OrderEntity(id = null, purchaseNumber = "PO123", bookingId = 1)
 
         every { orderDao.save(orderEntity) }.returns(Mono.just(orderEntity.copy(id = 1)))
 
-        val result = orderRepository.save(order)
-
-        assertEquals(1, result.id)
-        assertEquals("PO123", result.purchaseNumber)
-        assertEquals(1, result.bookingId)
+        StepVerifier.create(orderRepository.save(order))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("PO123", result.purchaseNumber)
+                assertEquals(1, result.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenOrderNotSaved(): Unit = runTest {
+    fun throwsExceptionWhenOrderNotSaved() {
         val order = Order(id = null, purchaseNumber = "PO123", bookingId = 1, invoices = emptyList())
         val orderEntity = OrderEntity(id = null, purchaseNumber = "PO123", bookingId = 1)
 
         every { orderDao.save(orderEntity) }.returns(Mono.empty())
 
-        assertFailsWith<ModelNotSavedException>("Order not saved") {
-            orderRepository.save(order)
-        }
+        StepVerifier.create(orderRepository.save(order))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun findsOrderByPurchaseNumberAndBookingId() = runTest {
+    fun findsOrderByPurchaseNumberAndBookingId() {
         val orderEntity = OrderEntity(id = 1, purchaseNumber = "PO123", bookingId = 1)
 
         every { orderDao.findByPurchaseNumberAndBookingId("PO123", 1) }
             .returns(Mono.just(orderEntity))
 
-        val result = orderRepository.findByPurchaseNumberAndBookingId("PO123", 1)
-
-        assertEquals(1, result?.id)
-        assertEquals("PO123", result?.purchaseNumber)
-        assertEquals(1, result?.bookingId)
+        StepVerifier.create(orderRepository.findByPurchaseNumberAndBookingId("PO123", 1))
+            .assertNext { result ->
+                assertEquals(1, result?.id)
+                assertEquals("PO123", result?.purchaseNumber)
+                assertEquals(1, result?.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsNullWhenOrderNotFound() = runTest {
+    fun returnsEmptyMonoWhenOrderNotFound() {
         every { orderDao.findByPurchaseNumberAndBookingId("PO123", 1) }.returns(Mono.empty())
 
-        val result = orderRepository.findByPurchaseNumberAndBookingId("PO123", 1)
-
-        assertNull(result)
+        StepVerifier.create(orderRepository.findByPurchaseNumberAndBookingId("PO123", 1))
+            .verifyComplete()
     }
 
     @Test
-    fun findsOrdersByContainerIdAndUserId() = runTest {
+    fun findsOrdersByContainerIdAndUserId() {
         // Arrange
         val containerId = "CONT-001"
         val userId = 1L
@@ -85,32 +85,32 @@ class OrderRepositoryImplTest {
         every { orderDao.findOrdersByContainerIdAndUserId(containerId, userId) } returns
             Flux.fromIterable(orderEntities)
 
-        // Act
-        val result = orderRepository.findOrdersByContainerIdAndUserId(containerId, userId).toList()
-
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(1, result[0].id)
-        assertEquals("PO-001", result[0].purchaseNumber)
-        assertEquals(1, result[0].bookingId)
-        assertEquals(2, result[1].id)
-        assertEquals("PO-002", result[1].purchaseNumber)
-        assertEquals(1, result[1].bookingId)
+        // Act & Assert
+        StepVerifier.create(orderRepository.findOrdersByContainerIdAndUserId(containerId, userId))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("PO-001", result.purchaseNumber)
+                assertEquals(1, result.bookingId)
+            }
+            .assertNext { result ->
+                assertEquals(2, result.id)
+                assertEquals("PO-002", result.purchaseNumber)
+                assertEquals(1, result.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun findsOrdersByContainerIdAndUserId_EmptyResult() = runTest {
+    fun findsOrdersByContainerIdAndUserId_EmptyResult() {
         // Arrange
         val containerId = "CONT-001"
         val userId = 1L
 
         every { orderDao.findOrdersByContainerIdAndUserId(containerId, userId) } returns Flux.empty()
 
-        // Act
-        val result = orderRepository.findOrdersByContainerIdAndUserId(containerId, userId).toList()
-
-        // Assert
-        assertEquals(0, result.size)
+        // Act & Assert
+        StepVerifier.create(orderRepository.findOrdersByContainerIdAndUserId(containerId, userId))
+            .verifyComplete()
     }
 
 }

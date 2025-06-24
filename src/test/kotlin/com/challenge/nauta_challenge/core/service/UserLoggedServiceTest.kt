@@ -5,7 +5,6 @@ import com.challenge.nauta_challenge.core.model.User
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,8 +13,8 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.core.context.SecurityContext
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 @SpringBootTest
 class UserLoggedServiceTest {
@@ -36,7 +35,7 @@ class UserLoggedServiceTest {
     }
 
     @Test
-    fun devuelveUsuarioActualCuandoEstáAutenticado(): Unit = runTest {
+    fun devuelveUsuarioActualCuandoEstáAutenticado() {
         // Arrange
         val userId = 1L
         val userEmail = "test@example.com"
@@ -49,34 +48,35 @@ class UserLoggedServiceTest {
         every { securityContext.authentication } returns authentication
         every { authentication.principal } returns user
 
-        // Act
-        val resultado = userLoggedService.getCurrentUserId()
-
-        // Assert
-        assertEquals(userId, resultado.id)
-        assertEquals(userEmail, resultado.email)
+        // Act & Assert
+        StepVerifier.create(userLoggedService.getCurrentUserId())
+            .assertNext { resultado ->
+                assertEquals(userId, resultado.id)
+                assertEquals(userEmail, resultado.email)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoHayAutenticacion(): Unit = runTest {
+    fun lanzaExcepcionCuandoNoHayAutenticacion() {
         // Arrange
         every { securityContext.authentication } returns null
 
         // Act & Assert
-        assertFailsWith<UnauthorizedException>("Usuario no autenticado") {
-            userLoggedService.getCurrentUserId()
-        }
+        StepVerifier.create(userLoggedService.getCurrentUserId())
+            .expectError(UnauthorizedException::class.java)
+            .verify()
     }
 
     @Test
-    fun lanzaExcepcionCuandoPrincipalNoEsCustomUserDetails(): Unit = runTest {
+    fun lanzaExcepcionCuandoPrincipalNoEsCustomUserDetails() {
         // Arrange
         every { securityContext.authentication } returns authentication
         every { authentication.principal } returns "not a CustomUserDetails"
 
         // Act & Assert
-        assertFailsWith<ClassCastException> {
-            userLoggedService.getCurrentUserId()
-        }
+        StepVerifier.create(userLoggedService.getCurrentUserId())
+            .expectError(UnauthorizedException::class.java)
+            .verify()
     }
 }

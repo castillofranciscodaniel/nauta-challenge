@@ -8,9 +8,9 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.UserDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.UserEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import java.time.LocalDateTime
 import kotlin.test.*
 
@@ -21,7 +21,7 @@ class UserRepositoryImplTest {
     private val userRepository: UserRepository = UserRepositoryImpl(userDao)
 
     @Test
-    fun findsUserByEmail() = runTest {
+    fun findsUserByEmail() {
         val userEntity = UserEntity(
             id = 1,
             email = "test@example.com",
@@ -31,51 +31,58 @@ class UserRepositoryImplTest {
 
         every { userDao.findByEmail("test@example.com") }.returns(Mono.just(userEntity))
 
-        val result = userRepository.findByEmail("test@example.com")
-
-        assertEquals(1, result?.id)
-        assertEquals("test@example.com", result?.email)
-        assertEquals("password", result?.password)
+        StepVerifier.create(userRepository.findByEmail("test@example.com"))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("test@example.com", result.email)
+                assertEquals("password", result.password)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsNullWhenUserNotFound(): Unit = runTest {
+    fun returnsEmptyMonoWhenUserNotFound() {
         every { userDao.findByEmail("test@example.com") }.returns(Mono.empty())
 
-        val result = userRepository.findByEmail("test@example.com")
-
-        assertNull(result)
+        StepVerifier.create(userRepository.findByEmail("test@example.com"))
+            .verifyComplete()
     }
 
     @Test
-    fun checksUserExistenceByEmail() = runTest {
+    fun checksUserExistenceByEmail() {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.just(true))
 
-        val result = userRepository.existsByEmail("test@example.com")
-
-        assertTrue(result)
+        StepVerifier.create(userRepository.existsByEmail("test@example.com"))
+            .assertNext { result ->
+                assertTrue(result)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsFalseWhenUserDoesNotExist() = runTest {
+    fun returnsFalseWhenUserDoesNotExist() {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.just(false))
 
-        val result = userRepository.existsByEmail("test@example.com")
-
-        assertFalse(result)
+        StepVerifier.create(userRepository.existsByEmail("test@example.com"))
+            .assertNext { result ->
+                assertFalse(result)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsFalseWhenExistsByEmailReturnsMonoEmpty() = runTest {
+    fun returnsFalseWhenExistsByEmailReturnsMonoEmpty() {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.empty())
 
-        val result = userRepository.existsByEmail("test@example.com")
-
-        assertFalse(result)
+        StepVerifier.create(userRepository.existsByEmail("test@example.com"))
+            .assertNext { result ->
+                assertFalse(result)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun savesUserSuccessfully() = runTest {
+    fun savesUserSuccessfully() {
         val user = User(
             id = null,
             email = "test@example.com",
@@ -86,15 +93,17 @@ class UserRepositoryImplTest {
 
         every { userDao.save(userEntity) }.returns(Mono.just(savedUserEntity))
 
-        val result = userRepository.save(user)
-
-        assertEquals(1, result.id)
-        assertEquals("test@example.com", result.email)
-        assertEquals("password", result.password)
+        StepVerifier.create(userRepository.save(user))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("test@example.com", result.email)
+                assertEquals("password", result.password)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenUserNotSaved(): Unit = runTest {
+    fun throwsExceptionWhenUserNotSaved() {
         val user = User(
             id = null,
             email = "test@example.com",
@@ -104,22 +113,22 @@ class UserRepositoryImplTest {
 
         every { userDao.save(userEntity) }.returns(Mono.empty())
 
-        assertFailsWith<ModelNotSavedException>("User not saved") {
-            userRepository.save(user)
-        }
+        StepVerifier.create(userRepository.save(user))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun throwsRepositoryExceptionWhenErrorDuringExistsByEmail() = runTest {
+    fun throwsRepositoryExceptionWhenErrorDuringExistsByEmail() {
         // Arrange
         val email = "test@example.com"
 
         // Simular una excepción durante la llamada al DAO
-        every { userDao.existsByEmail(email) }.throws(RuntimeException("Database error during check"))
+        every { userDao.existsByEmail(email) }.returns(Mono.error(RuntimeException("Database error during check")))
 
         // Act & Assert
-        assertFailsWith<RepositoryException>("Error checking if user exists") {
-            userRepository.existsByEmail(email)
-        }
+        StepVerifier.create(userRepository.existsByEmail(email))
+            .expectError(RepositoryException::class.java)
+            .verify()
     }
 }

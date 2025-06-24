@@ -8,13 +8,10 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Mono
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
+import reactor.test.StepVerifier
+import kotlin.test.*
 
 @SpringBootTest
 class BookingRepositoryImplTest {
@@ -23,65 +20,72 @@ class BookingRepositoryImplTest {
     private val bookingRepository: BookingRepository = BookingRepositoryImpl(bookingDao)
 
     @Test
-    fun savesBookingSuccessfully() = runTest {
+    fun savesBookingSuccessfully() {
         val booking = Booking(id = null, bookingNumber = "BK123", userId = 1)
         val bookingEntity = BookingEntity(id = null, bookingNumber = "BK123", userId = 1)
 
         every { bookingDao.save(bookingEntity) }.returns(Mono.just(bookingEntity.copy(id = 1)))
 
-        val result = bookingRepository.save(booking)
-
-        assertEquals(1, result.id)
-        assertEquals("BK123", result.bookingNumber)
-        assertEquals(1, result.userId)
+        StepVerifier.create(bookingRepository.save(booking))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("BK123", result.bookingNumber)
+                assertEquals(1, result.userId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenBookingNotSaved(): Unit = runTest {
+    fun throwsExceptionWhenBookingNotSaved() {
         val booking = Booking(id = null, bookingNumber = "BK123", userId = 1)
         val bookingEntity = BookingEntity(id = null, bookingNumber = "BK123", userId = 1)
 
+        // Mock para devolver Mono.empty()
         every { bookingDao.save(bookingEntity) }.returns(Mono.empty())
 
-        assertFailsWith<ModelNotSavedException>("Booking not saved") {
-            bookingRepository.save(booking)
-        }
+        // Verificar la excepción sin validar el mensaje exacto
+        StepVerifier.create(bookingRepository.save(booking))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun findsBookingByBookingNumberAndUserId() = runTest {
+    fun findsBookingByBookingNumberAndUserId() {
         val bookingEntity = BookingEntity(id = 1, bookingNumber = "BK123", userId = 1)
 
         every { bookingDao.findByBookingNumberAndUserId("BK123", 1) }
             .returns(Mono.just(bookingEntity))
 
-        val result = bookingRepository.findByBookingNumberAndUserId("BK123", 1)
-
-        assertEquals(1, result?.id)
-        assertEquals("BK123", result?.bookingNumber)
-        assertEquals(1, result?.userId)
+        StepVerifier.create(bookingRepository.findByBookingNumberAndUserId("BK123", 1))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("BK123", result.bookingNumber)
+                assertEquals(1, result.userId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsNullWhenBookingNotFound() = runTest {
+    fun returnsEmptyMonoWhenBookingNotFound() {
         every { bookingDao.findByBookingNumberAndUserId("BK123", 1) }.returns(Mono.empty())
 
-        val result = bookingRepository.findByBookingNumberAndUserId("BK123", 1)
-
-        assertNull(result)
+        StepVerifier.create(bookingRepository.findByBookingNumberAndUserId("BK123", 1))
+            .verifyComplete()
     }
 
     @Test
-    fun throwsRepositoryExceptionWhenErrorDuringFindByBookingNumberAndUserId() = runTest {
+    fun throwsRepositoryExceptionWhenErrorDuringFindByBookingNumberAndUserId() {
         val bookingNumber = "BK123"
         val userId = 1L
 
         // Simular una excepción durante la llamada al DAO
-        every { bookingDao.findByBookingNumberAndUserId(bookingNumber, userId) }.throws(RuntimeException("Database connection error"))
+        every { bookingDao.findByBookingNumberAndUserId(bookingNumber, userId) }.returns(
+            Mono.error(RuntimeException("Database connection error"))
+        )
 
-        assertFailsWith<RepositoryException>("Error finding booking") {
-            bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId)
-        }
+        StepVerifier.create(bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId))
+            .expectError(RepositoryException::class.java)
+            .verify()
     }
 
 }

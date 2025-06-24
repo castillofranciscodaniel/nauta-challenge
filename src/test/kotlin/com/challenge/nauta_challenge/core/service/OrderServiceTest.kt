@@ -4,14 +4,14 @@ import com.challenge.nauta_challenge.core.model.*
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.core.repository.ContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
+import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.assertEquals
 
 @SpringBootTest
@@ -31,7 +31,7 @@ class OrderServiceTest {
     )
 
     @Test
-    fun returnsExistingOrderIfAlreadyStored(): Unit = runTest {
+    fun returnsExistingOrderIfAlreadyStored() {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -54,25 +54,26 @@ class OrderServiceTest {
             orderId = 10L
         )
 
-        coEvery { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber, bookingId) } returns existingOrder
-        coEvery { invoiceService.saveInvoicesForOrder(listOf(invoice), 10L) } returns listOf(savedInvoice)
+        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber, bookingId) } returns Mono.just(
+            existingOrder
+        )
+        every { invoiceService.saveInvoicesForOrder(listOf(invoice), 10L) } returns Mono.just(listOf(savedInvoice))
 
-        // Act
-        val result = orderService.saveOrdersForBooking(listOf(order), bookingId)
-
-        // Assert
-        assertEquals(1, result.size)
-        assertEquals(10L, result[0].id)
-        assertEquals(purchaseNumber, result[0].purchaseNumber)
-        assertEquals(bookingId, result[0].bookingId)
-        assertEquals(1, result[0].invoices.size)
-        assertEquals(20L, result[0].invoices[0].id)
-        assertEquals("INV-001", result[0].invoices[0].invoiceNumber)
-        coVerify(exactly = 0) { orderRepository.save(any()) }
+        // Act & Assert
+        StepVerifier.create(orderService.saveOrdersForBooking(listOf(order), bookingId))
+            .assertNext { result ->
+                assertEquals(1, result.size)
+                assertEquals(10L, result[0].id)
+                assertEquals(purchaseNumber, result[0].purchaseNumber)
+                assertEquals(bookingId, result[0].bookingId)
+                assertEquals(1, result[0].invoices.size)
+                assertEquals(20L, result[0].invoices[0].id)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun savesOrderWhenItDoesNotExist(): Unit = runTest {
+    fun savesOrderWhenItDoesNotExist() {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -95,26 +96,25 @@ class OrderServiceTest {
             orderId = 10L
         )
 
-        coEvery { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber, bookingId) } returns null
-        coEvery { orderRepository.save(order.copy(bookingId = bookingId)) } returns savedOrder
-        coEvery { invoiceService.saveInvoicesForOrder(listOf(invoice), 10L) } returns listOf(savedInvoice)
+        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber, bookingId) } returns Mono.empty()
+        every { orderRepository.save(order.copy(bookingId = bookingId)) } returns Mono.just(savedOrder)
+        every { invoiceService.saveInvoicesForOrder(listOf(invoice), 10L) } returns Mono.just(listOf(savedInvoice))
 
-        // Act
-        val result = orderService.saveOrdersForBooking(listOf(order), bookingId)
-
-        // Assert
-        assertEquals(1, result.size)
-        assertEquals(10L, result[0].id)
-        assertEquals(purchaseNumber, result[0].purchaseNumber)
-        assertEquals(bookingId, result[0].bookingId)
-        assertEquals(1, result[0].invoices.size)
-        assertEquals(20L, result[0].invoices[0].id)
-        assertEquals("INV-001", result[0].invoices[0].invoiceNumber)
-        coVerify(exactly = 1) { orderRepository.save(order.copy(bookingId = bookingId)) }
+        // Act & Assert
+        StepVerifier.create(orderService.saveOrdersForBooking(listOf(order), bookingId))
+            .assertNext { result ->
+                assertEquals(1, result.size)
+                assertEquals(10L, result[0].id)
+                assertEquals(purchaseNumber, result[0].purchaseNumber)
+                assertEquals(bookingId, result[0].bookingId)
+                assertEquals(1, result[0].invoices.size)
+                assertEquals(20L, result[0].invoices[0].id)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun processesMultipleOrdersCorrectly(): Unit = runTest {
+    fun processesMultipleOrdersCorrectly() {
         // Arrange
         val bookingId = 1L
         val purchaseNumber1 = "PO-123"
@@ -153,47 +153,52 @@ class OrderServiceTest {
         val savedInvoice1 = Invoice(id = 30L, invoiceNumber = "INV-001", orderId = 10L)
         val savedInvoice2 = Invoice(id = 40L, invoiceNumber = "INV-002", orderId = 20L)
 
-        coEvery { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber1, bookingId) } returns existingOrder
-        coEvery { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber2, bookingId) } returns null
-        coEvery { orderRepository.save(order2.copy(bookingId = bookingId)) } returns savedOrder
-        coEvery { invoiceService.saveInvoicesForOrder(listOf(invoice1), 10L) } returns listOf(savedInvoice1)
-        coEvery { invoiceService.saveInvoicesForOrder(listOf(invoice2), 20L) } returns listOf(savedInvoice2)
+        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber1, bookingId) } returns Mono.just(
+            existingOrder
+        )
+        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber2, bookingId) } returns Mono.empty()
+        every { orderRepository.save(order2.copy(bookingId = bookingId)) } returns Mono.just(savedOrder)
+        every { invoiceService.saveInvoicesForOrder(listOf(invoice1), 10L) } returns Mono.just(listOf(savedInvoice1))
+        every { invoiceService.saveInvoicesForOrder(listOf(invoice2), 20L) } returns Mono.just(listOf(savedInvoice2))
 
-        // Act
-        val result = orderService.saveOrdersForBooking(listOf(order1, order2), bookingId)
+        // Act & Assert
+        StepVerifier.create(orderService.saveOrdersForBooking(listOf(order1, order2), bookingId))
+            .assertNext { result ->
+                assertEquals(2, result.size)
+                assertEquals(10L, result[0].id)
+                assertEquals(purchaseNumber1, result[0].purchaseNumber)
+                assertEquals(bookingId, result[0].bookingId)
+                assertEquals(1, result[0].invoices.size)
+                assertEquals(30L, result[0].invoices[0].id)
 
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(10L, result[0].id)
-        assertEquals(purchaseNumber1, result[0].purchaseNumber)
-        assertEquals(bookingId, result[0].bookingId)
-        assertEquals(1, result[0].invoices.size)
-        assertEquals(30L, result[0].invoices[0].id)
-
-        assertEquals(20L, result[1].id)
-        assertEquals(purchaseNumber2, result[1].purchaseNumber)
-        assertEquals(bookingId, result[1].bookingId)
-        assertEquals(1, result[1].invoices.size)
-        assertEquals(40L, result[1].invoices[0].id)
+                assertEquals(20L, result[1].id)
+                assertEquals(purchaseNumber2, result[1].purchaseNumber)
+                assertEquals(bookingId, result[1].bookingId)
+                assertEquals(1, result[1].invoices.size)
+                assertEquals(40L, result[1].invoices[0].id)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun handlesEmptyListCorrectly(): Unit = runTest {
+    fun handlesEmptyListCorrectly() {
         // Arrange
         val bookingId = 1L
 
-        // Act
-        val result = orderService.saveOrdersForBooking(emptyList(), bookingId)
+        // Act & Assert
+        StepVerifier.create(orderService.saveOrdersForBooking(emptyList(), bookingId))
+            .assertNext { result ->
+                assertEquals(0, result.size)
+            }
+            .verifyComplete()
 
-        // Assert
-        assertEquals(0, result.size)
-        coVerify(exactly = 0) { orderRepository.findByPurchaseNumberAndBookingId(any(), any()) }
-        coVerify(exactly = 0) { orderRepository.save(any()) }
-        coVerify(exactly = 0) { invoiceService.saveInvoicesForOrder(any(), any()) }
+        verify(exactly = 0) { orderRepository.findByPurchaseNumberAndBookingId(any(), any()) }
+        verify(exactly = 0) { orderRepository.save(any()) }
+        verify(exactly = 0) { invoiceService.saveInvoicesForOrder(any(), any()) }
     }
 
     @Test
-    fun `findAllOrdersForCurrentUser should return orders with invoices`(): Unit = runTest {
+    fun `findAllOrdersForCurrentUser should return orders with invoices`() {
         // Arrange
         val userId = 1L
         val user = User(id = userId, email = "test@gmail.com")
@@ -203,55 +208,54 @@ class OrderServiceTest {
         val invoice1 = Invoice(id = 301L, invoiceNumber = "INV-001", orderId = order1.id!!)
         val invoice2 = Invoice(id = 302L, invoiceNumber = "INV-002", orderId = order2.id!!)
 
-        coEvery { userLoggedService.getCurrentUserId() } returns user
-        coEvery { orderRepository.findAllByUserId(userId) } returns flowOf(order1, order2)
-        coEvery { invoiceService.findAllByOrderId(order1.id!!) } returns flowOf(invoice1)
-        coEvery { invoiceService.findAllByOrderId(order2.id!!) } returns flowOf(invoice2)
+        every { userLoggedService.getCurrentUserId() } returns Mono.just(user)
+        every { orderRepository.findAllByUserId(userId) } returns Flux.just(order1, order2)
+        every { invoiceService.findAllByOrderId(order1.id!!) } returns Flux.just(invoice1)
+        every { invoiceService.findAllByOrderId(order2.id!!) } returns Flux.just(invoice2)
 
-        // Act
-        val result = orderService.findAllOrdersForCurrentUser().toList()
-
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(order1.id, result[0].id)
-        assertEquals(order1.purchaseNumber, result[0].purchaseNumber)
-        assertEquals(1, result[0].invoices.size)
-        assertEquals(invoice1.id, result[0].invoices[0].id)
-
-        assertEquals(order2.id, result[1].id)
-        assertEquals(order2.purchaseNumber, result[1].purchaseNumber)
-        assertEquals(1, result[1].invoices.size)
-        assertEquals(invoice2.id, result[1].invoices[0].id)
+        // Act & Assert
+        StepVerifier.create(orderService.findAllOrdersForCurrentUser())
+            .assertNext { result ->
+                assertEquals(order1.id, result.id)
+                assertEquals(order1.purchaseNumber, result.purchaseNumber)
+                assertEquals(1, result.invoices.size)
+                assertEquals(invoice1.id, result.invoices[0].id)
+            }
+            .assertNext { result ->
+                assertEquals(order2.id, result.id)
+                assertEquals(order2.purchaseNumber, result.purchaseNumber)
+                assertEquals(1, result.invoices.size)
+                assertEquals(invoice2.id, result.invoices[0].id)
+            }
+            .verifyComplete()
 
         // Verify
-        coVerify { userLoggedService.getCurrentUserId() }
-        coVerify { orderRepository.findAllByUserId(userId) }
-        coVerify { invoiceService.findAllByOrderId(order1.id!!) }
-        coVerify { invoiceService.findAllByOrderId(order2.id!!) }
+        verify { userLoggedService.getCurrentUserId() }
+        verify { orderRepository.findAllByUserId(userId) }
+        verify { invoiceService.findAllByOrderId(order1.id!!) }
+        verify { invoiceService.findAllByOrderId(order2.id!!) }
     }
 
     @Test
-    fun `findAllOrdersForCurrentUser should return empty list when user has no orders`(): Unit = runTest {
+    fun `findAllOrdersForCurrentUser should return empty list when user has no orders`() {
         // Arrange
         val userId = 1L
         val user = User(id = userId, email = "test@gmail.com")
 
-        coEvery { userLoggedService.getCurrentUserId() } returns user
-        coEvery { orderRepository.findAllByUserId(userId) } returns flowOf()
+        every { userLoggedService.getCurrentUserId() } returns Mono.just(user)
+        every { orderRepository.findAllByUserId(userId) } returns Flux.empty()
 
-        // Act
-        val result = orderService.findAllOrdersForCurrentUser().toList()
-
-        // Assert
-        assertEquals(0, result.size)
+        // Act & Assert
+        StepVerifier.create(orderService.findAllOrdersForCurrentUser())
+            .verifyComplete()
 
         // Verify
-        coVerify { userLoggedService.getCurrentUserId() }
-        coVerify { orderRepository.findAllByUserId(userId) }
+        verify { userLoggedService.getCurrentUserId() }
+        verify { orderRepository.findAllByUserId(userId) }
     }
 
     @Test
-    fun `findContainersByOrderId should return containers for authorized order`() = runTest {
+    fun `findContainersByOrderId should return containers for authorized order`() {
         // Arrange
         val userId = 1L
         val purchaseNumber = "PO-123"
@@ -263,48 +267,47 @@ class OrderServiceTest {
         val container2 = Container(id = 102L, containerNumber = "CONT-002", bookingId = bookingId)
 
         // Mock current user
-        coEvery { userLoggedService.getCurrentUserId() } returns user
+        every { userLoggedService.getCurrentUserId() } returns Mono.just(user)
 
-        coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
-                flowOf(container1, container2)
+        every { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
+                Flux.just(container1, container2)
 
-        // Act
-        val result = orderService.findContainersByOrderId(purchaseNumber).toList()
-
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(container1.id, result[0].id)
-        assertEquals(container1.containerNumber, result[0].containerNumber)
-        assertEquals(container2.id, result[1].id)
-        assertEquals(container2.containerNumber, result[1].containerNumber)
+        // Act & Assert
+        StepVerifier.create(orderService.findContainersByOrderId(purchaseNumber))
+            .assertNext { result ->
+                assertEquals(container1.id, result.id)
+                assertEquals(container1.containerNumber, result.containerNumber)
+            }
+            .assertNext { result ->
+                assertEquals(container2.id, result.id)
+                assertEquals(container2.containerNumber, result.containerNumber)
+            }
+            .verifyComplete()
 
         // Verify
-        coVerify(exactly = 1) { userLoggedService.getCurrentUserId() }
-        coVerify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
+        verify(exactly = 1) { userLoggedService.getCurrentUserId() }
+        verify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
     }
 
-
     @Test
-    fun `findContainersByOrderId should return empty flow when no containers are associated with order`() = runTest {
+    fun `findContainersByOrderId should return empty flow when no containers are associated with order`() {
         // Arrange
         val userId = 1L
         val purchaseNumber = "PO-123"
 
         val user = User(id = userId, email = "user@example.com", password = "password")
 
-        coEvery { userLoggedService.getCurrentUserId() } returns user
+        every { userLoggedService.getCurrentUserId() } returns Mono.just(user)
 
-        coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
-                flowOf()
+        every { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
+                Flux.empty()
 
-        // Act
-        val result = orderService.findContainersByOrderId(purchaseNumber).toList()
-
-        // Assert
-        assertEquals(0, result.size)
+        // Act & Assert
+        StepVerifier.create(orderService.findContainersByOrderId(purchaseNumber))
+            .verifyComplete()
 
         // Verify
-        coVerify(exactly = 1) { userLoggedService.getCurrentUserId() }
-        coVerify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
+        verify(exactly = 1) { userLoggedService.getCurrentUserId() }
+        verify(exactly = 1) { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) }
     }
 }

@@ -6,77 +6,72 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderContaine
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderContainerEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.*
 
 @SpringBootTest
 class OrderContainerRepositoryImplTest {
 
     private val orderContainerDao = mockk<OrderContainerDao>()
-    private val orderContainerRepository: OrderContainerRepository = OrderContainerRepositoryImpl(orderContainerDao)
+    private val orderContainerRepository = OrderContainerRepositoryImpl(orderContainerDao)
 
     @Test
-    fun savesOrderContainerRelationshipSuccessfully() = runTest {
+    fun savesOrderContainerRelationshipSuccessfully() {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
 
-        every { orderContainerDao.save(orderContainerEntity) }.returns(Mono.just(orderContainerEntity))
+        every { orderContainerDao.save(orderContainerEntity) } returns Mono.just(orderContainerEntity)
 
-        val result = orderContainerRepository.save(orderId, containerId)
-
-        assertEquals(orderId, result.orderId)
-        assertEquals(containerId, result.containerId)
+        StepVerifier.create(orderContainerRepository.save(orderId, containerId))
+            .assertNext { result ->
+                assertEquals(orderId, result.orderId)
+                assertEquals(containerId, result.containerId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenRelationshipNotSaved() = runTest {
+    fun throwsExceptionWhenRelationshipNotSaved() {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
 
-        every { orderContainerDao.save(orderContainerEntity) }.returns(Mono.empty())
+        every { orderContainerDao.save(orderContainerEntity) } returns Mono.empty()
 
-        assertFailsWith<ModelNotSavedException>("OrderContainer not saved") {
-            orderContainerRepository.save(orderId, containerId)
-        }
+        StepVerifier.create(orderContainerRepository.save(orderId, containerId))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun verifiesRelationshipExistenceWhenItExists() = runTest {
+    fun checksExistenceByOrderIdAndContainerId() {
         val orderId = 1L
         val containerId = 2L
 
-        every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.just(true))
+        every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) } returns Mono.just(true)
 
-        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
-
-        assertTrue(result)
+        StepVerifier.create(orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId))
+            .assertNext { result ->
+                assertTrue(result)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun verifiesRelationshipExistenceWhenItDoesNotExist() = runTest {
+    fun returnsFalseWhenRelationshipDoesNotExist() {
         val orderId = 1L
         val containerId = 2L
 
-        every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.just(false))
+        every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) } returns Mono.just(false)
 
-        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
-
-        assertFalse(result)
-    }
-
-    @Test
-    fun returnsFalseWhenExistsByOrderIdAndContainerIdReturnsMonoEmpty() = runTest {
-        val orderId = 1L
-        val containerId = 2L
-
-        every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.empty())
-
-        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
-
-        assertFalse(result)
+        StepVerifier.create(orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId))
+            .assertNext { result ->
+                assertFalse(result)
+            }
+            .verifyComplete()
     }
 }

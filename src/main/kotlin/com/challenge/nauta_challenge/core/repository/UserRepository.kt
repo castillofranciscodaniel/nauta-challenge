@@ -1,11 +1,10 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.core.model.User
-import org.springframework.stereotype.Repository
+import reactor.core.publisher.Mono
 
-@Repository
 interface UserRepository {
-    suspend fun findByEmail(email: String): User?
-    suspend fun existsByEmail(email: String): Boolean
-    suspend fun save(user: User): User
+    fun findByEmail(email: String): Mono<User>
+    fun existsByEmail(email: String): Mono<Boolean>
+    fun save(user: User): Mono<User>
 }

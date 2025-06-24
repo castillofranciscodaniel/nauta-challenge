@@ -8,11 +8,10 @@ import com.challenge.nauta_challenge.infrastructure.repository.dao.ContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEntity
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import kotlin.test.*
 
 @SpringBootTest
@@ -22,57 +21,59 @@ class ContainerRepositoryImplTest {
     private val containerRepository: ContainerRepository = ContainerRepositoryImpl(containerDao)
 
     @Test
-    fun savesContainerSuccessfully() = runTest {
+    fun savesContainerSuccessfully() {
         val container = Container(id = null, containerNumber = "CONT123", bookingId = 1)
         val containerEntity = ContainerEntity(id = null, containerNumber = "CONT123", bookingId = 1)
 
         every { containerDao.save(containerEntity) }.returns(Mono.just(containerEntity.copy(id = 1)))
 
-        val result = containerRepository.save(container)
-
-        assertEquals(1, result.id)
-        assertEquals("CONT123", result.containerNumber)
-        assertEquals(1, result.bookingId)
+        StepVerifier.create(containerRepository.save(container))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("CONT123", result.containerNumber)
+                assertEquals(1, result.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun throwsExceptionWhenContainerNotSaved(): Unit = runTest {
+    fun throwsExceptionWhenContainerNotSaved() {
         val container = Container(id = null, containerNumber = "CONT123", bookingId = 1)
         val containerEntity = ContainerEntity(id = null, containerNumber = "CONT123", bookingId = 1)
 
         every { containerDao.save(containerEntity) }.returns(Mono.empty())
 
-        assertFailsWith<ModelNotSavedException>("Container not saved") {
-            containerRepository.save(container)
-        }
+        StepVerifier.create(containerRepository.save(container))
+            .expectError(ModelNotSavedException::class.java)
+            .verify()
     }
 
     @Test
-    fun findsContainerByNumberAndBookingId() = runTest {
+    fun findsContainerByNumberAndBookingId() {
         val containerEntity = ContainerEntity(id = 1, containerNumber = "CONT123", bookingId = 1)
 
         every { containerDao.findByContainerNumberAndBookingId("CONT123", 1) }
             .returns(Mono.just(containerEntity))
 
-        val result = containerRepository.findByContainerNumberAndBookingId("CONT123", 1)
-
-        assertEquals(1, result?.id)
-        assertEquals("CONT123", result?.containerNumber)
-        assertEquals(1, result?.bookingId)
+        StepVerifier.create(containerRepository.findByContainerNumberAndBookingId("CONT123", 1))
+            .assertNext { result ->
+                assertEquals(1, result.id)
+                assertEquals("CONT123", result.containerNumber)
+                assertEquals(1, result.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun returnsNullWhenContainerNotFound() = runTest {
+    fun returnsEmptyMonoWhenContainerNotFound() {
         every { containerDao.findByContainerNumberAndBookingId("CONT123", 1) }.returns(Mono.empty())
 
-        val result = containerRepository.findByContainerNumberAndBookingId("CONT123", 1)
-
-        assertNull(result)
+        StepVerifier.create(containerRepository.findByContainerNumberAndBookingId("CONT123", 1))
+            .verifyComplete()
     }
 
-
     @Test
-    fun `findContainersByPurchaseNumberAndUserId returns containers for specific purchase and user`() = runTest {
+    fun `findContainersByPurchaseNumberAndUserId returns containers for specific purchase and user`() {
         // Arrange
         val purchaseNumber = "PO-123"
         val userId = 10L
@@ -82,45 +83,45 @@ class ContainerRepositoryImplTest {
         every { containerDao.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
             Flux.just(containerEntity1, containerEntity2)
 
-        // Act
-        val result = containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId).toList()
-
-        // Assert
-        assertEquals(2, result.size)
-        assertEquals(1L, result[0].id)
-        assertEquals("CONT-001", result[0].containerNumber)
-        assertEquals(5L, result[0].bookingId)
-        assertEquals(2L, result[1].id)
-        assertEquals("CONT-002", result[1].containerNumber)
-        assertEquals(5L, result[1].bookingId)
+        // Act & Assert
+        StepVerifier.create(containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId))
+            .assertNext { container ->
+                assertEquals(1L, container.id)
+                assertEquals("CONT-001", container.containerNumber)
+                assertEquals(5L, container.bookingId)
+            }
+            .assertNext { container ->
+                assertEquals(2L, container.id)
+                assertEquals("CONT-002", container.containerNumber)
+                assertEquals(5L, container.bookingId)
+            }
+            .verifyComplete()
     }
 
     @Test
-    fun `findContainersByPurchaseNumberAndUserId returns empty flow when no containers found`() = runTest {
+    fun `findContainersByPurchaseNumberAndUserId returns empty flow when no containers found`() {
         // Arrange
         val purchaseNumber = "PO-123"
         val userId = 10L
 
         every { containerDao.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns Flux.empty()
 
-        // Act
-        val result = containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId).toList()
-
-        // Assert
-        assertEquals(0, result.size)
+        // Act & Assert
+        StepVerifier.create(containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId))
+            .verifyComplete()
     }
 
     @Test
-    fun `throws RepositoryException when error during findAllByUserId`() = runTest {
+    fun `throws RepositoryException when error during findAllByUserId`() {
         // Arrange
         val userId = 1L
 
         // Simular una excepción durante la llamada al DAO
-        every { containerDao.findAllByUserId(userId) }.throws(RuntimeException("Database error during flow operation"))
+        every { containerDao.findAllByUserId(userId) }.returns(Flux.error(RuntimeException("Database error during flow operation")))
 
         // Act & Assert
-        assertFailsWith<RepositoryException>("Error retrieving containers for user") {
-            containerRepository.findAllByUserId(userId).collect {  }
-        }
+        StepVerifier.create(containerRepository.findAllByUserId(userId))
+            .expectError(RepositoryException::class.java)
+            .verify()
     }
 }

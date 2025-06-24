@@ -6,9 +6,9 @@ import com.challenge.nauta_challenge.core.model.OrderContainer
 import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderContainerEntity
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Mono
 
 @Component
 class OrderContainerRepositoryImpl(
@@ -16,38 +16,29 @@ class OrderContainerRepositoryImpl(
 ) : OrderContainerRepository {
     private val logger = LoggerFactory.getLogger(OrderContainerRepositoryImpl::class.java)
 
-    override suspend fun save(orderId: Long, containerId: Long): OrderContainer {
+    override fun save(orderId: Long, containerId: Long): Mono<OrderContainer> {
         logger.info("[save] Attempting to save order-container relationship: orderId=$orderId, containerId=$containerId")
 
-        return runCatching {
-            orderContainerDao.save(OrderContainerEntity(orderId = orderId, containerId = containerId))
-                .awaitSingleOrNull()
-                ?.toModel()
-                ?.also { logger.info("[save] Successfully saved order-container relationship: orderId=$orderId, containerId=$containerId") }
-                ?: throw ModelNotSavedException("OrderContainer not saved")
-        }.getOrElse { e ->
-            logger.error(
-                "[save] Error while saving order-container relationship: orderId=$orderId, containerId=$containerId",
-                e
-            )
-            throw ModelNotSavedException("OrderContainer not saved: ${e.message}")
-        }
+        val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
+        return orderContainerDao.save(orderContainerEntity)
+            .map { it.toModel() }
+            .doOnSuccess { logger.info("[save] Successfully saved order-container relationship: orderId=$orderId, containerId=$containerId") }
+            .switchIfEmpty(Mono.error(ModelNotSavedException("OrderContainer not saved")))
+            .onErrorMap { e ->
+                logger.error("[save] Error while saving order-container relationship: orderId=$orderId, containerId=$containerId", e)
+                ModelNotSavedException("OrderContainer not saved: ${e.message}")
+            }
     }
 
-    override suspend fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Boolean {
+    override fun existsByOrderIdAndContainerId(orderId: Long, containerId: Long): Mono<Boolean> {
         logger.debug("[existsByOrderIdAndContainerId] Checking if relationship exists: orderId=$orderId, containerId=$containerId")
 
-        return runCatching {
-            orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId)
-                .awaitSingleOrNull()
-                ?.also { logger.debug("[existsByOrderIdAndContainerId] Relationship exists=$it: orderId=$orderId, containerId=$containerId") }
-                ?: false
-        }.getOrElse { e ->
-            logger.warn(
-                "[existsByOrderIdAndContainerId] Error checking relationship existence: orderId=$orderId, containerId=$containerId",
-                e
-            )
-            throw RepositoryException("Error al verificar relación entre orden y contenedor", e)
-        }
+        return orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId)
+            .defaultIfEmpty(false)
+            .doOnSuccess { exists -> logger.debug("[existsByOrderIdAndContainerId] Relationship exists=$exists: orderId=$orderId, containerId=$containerId") }
+            .onErrorMap { e ->
+                logger.warn("[existsByOrderIdAndContainerId] Error checking relationship existence: orderId=$orderId, containerId=$containerId", e)
+                RepositoryException("Error checking relationship existence", e)
+            }
     }
 }
