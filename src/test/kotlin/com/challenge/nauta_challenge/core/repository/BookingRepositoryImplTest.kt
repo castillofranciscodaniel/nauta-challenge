@@ -2,6 +2,7 @@ package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.BookingRepositoryImpl
 import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
+import com.challenge.nauta_challenge.core.exception.RepositoryException
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
@@ -68,6 +69,19 @@ class BookingRepositoryImplTest {
         val result = bookingRepository.findByBookingNumberAndUserId("BK123", 1)
 
         assertNull(result)
+    }
+
+    @Test
+    fun throwsRepositoryExceptionWhenErrorDuringFindByBookingNumberAndUserId() = runTest {
+        val bookingNumber = "BK123"
+        val userId = 1L
+
+        // Simular una excepción durante la llamada al DAO
+        every { bookingDao.findByBookingNumberAndUserId(bookingNumber, userId) }.throws(RuntimeException("Database connection error"))
+
+        assertFailsWith<RepositoryException>("Error finding booking") {
+            bookingRepository.findByBookingNumberAndUserId(bookingNumber, userId)
+        }
     }
 
 }

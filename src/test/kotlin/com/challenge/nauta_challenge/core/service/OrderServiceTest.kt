@@ -292,7 +292,6 @@ class OrderServiceTest {
 
         val user = User(id = userId, email = "user@example.com", password = "password")
 
-        // Mock current user
         coEvery { userLoggedService.getCurrentUserId() } returns user
 
         coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns

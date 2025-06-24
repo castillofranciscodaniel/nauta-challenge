@@ -6,6 +6,7 @@ import com.challenge.nauta_challenge.core.repository.ContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import org.springframework.stereotype.Service
@@ -31,6 +32,10 @@ class ContainerService(
 
         // Get all containers for the user with a single query
         return containerRepository.findAllByUserId(currentUser.id!!)
+            .catch { e ->
+                // Handle any exceptions that occur during the flow
+                throw RuntimeException("Error fetching containers for user ${currentUser.id}", e)
+            }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

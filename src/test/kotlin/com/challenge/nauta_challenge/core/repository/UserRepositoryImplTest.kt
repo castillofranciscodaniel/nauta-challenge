@@ -2,6 +2,7 @@ package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.UserRepositoryImpl
 import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
+import com.challenge.nauta_challenge.core.exception.RepositoryException
 import com.challenge.nauta_challenge.core.model.User
 import com.challenge.nauta_challenge.infrastructure.repository.dao.UserDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.UserEntity
@@ -105,6 +106,20 @@ class UserRepositoryImplTest {
 
         assertFailsWith<ModelNotSavedException>("User not saved") {
             userRepository.save(user)
+        }
+    }
+
+    @Test
+    fun throwsRepositoryExceptionWhenErrorDuringExistsByEmail() = runTest {
+        // Arrange
+        val email = "test@example.com"
+
+        // Simular una excepción durante la llamada al DAO
+        every { userDao.existsByEmail(email) }.throws(RuntimeException("Database error during check"))
+
+        // Act & Assert
+        assertFailsWith<RepositoryException>("Error checking if user exists") {
+            userRepository.existsByEmail(email)
         }
     }
 }

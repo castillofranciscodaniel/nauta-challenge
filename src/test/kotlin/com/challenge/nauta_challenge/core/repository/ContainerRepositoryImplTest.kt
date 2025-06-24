@@ -2,6 +2,7 @@ package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.ContainerRepositoryImpl
 import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
+import com.challenge.nauta_challenge.core.exception.RepositoryException
 import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.infrastructure.repository.dao.ContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEntity
@@ -12,10 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
+import kotlin.test.*
 
 @SpringBootTest
 class ContainerRepositoryImplTest {
@@ -110,5 +108,19 @@ class ContainerRepositoryImplTest {
 
         // Assert
         assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `throws RepositoryException when error during findAllByUserId`() = runTest {
+        // Arrange
+        val userId = 1L
+
+        // Simular una excepción durante la llamada al DAO
+        every { containerDao.findAllByUserId(userId) }.throws(RuntimeException("Database error during flow operation"))
+
+        // Act & Assert
+        assertFailsWith<RepositoryException>("Error retrieving containers for user") {
+            containerRepository.findAllByUserId(userId).collect {  }
+        }
     }
 }
