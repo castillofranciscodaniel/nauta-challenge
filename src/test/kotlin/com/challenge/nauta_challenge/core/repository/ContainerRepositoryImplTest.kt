@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.ContainerRepositoryImpl
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.infrastructure.repository.dao.ContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.ContainerEntity
@@ -43,7 +44,7 @@ class ContainerRepositoryImplTest {
 
         every { containerDao.save(containerEntity) }.returns(Mono.empty())
 
-        assertFailsWith<Exception>("Container not saved") {
+        assertFailsWith<ModelNotSavedException>("Container not saved") {
             containerRepository.save(container)
         }
     }

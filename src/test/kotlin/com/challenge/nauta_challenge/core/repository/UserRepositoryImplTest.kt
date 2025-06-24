@@ -1,7 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.UserRepositoryImpl
-import com.challenge.nauta_challenge.core.exception.NotFoundException
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.User
 import com.challenge.nauta_challenge.infrastructure.repository.dao.UserDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.UserEntity
@@ -103,7 +103,7 @@ class UserRepositoryImplTest {
 
         every { userDao.save(userEntity) }.returns(Mono.empty())
 
-        assertFailsWith<IllegalStateException>("User not saved") {
+        assertFailsWith<ModelNotSavedException>("User not saved") {
             userRepository.save(user)
         }
     }

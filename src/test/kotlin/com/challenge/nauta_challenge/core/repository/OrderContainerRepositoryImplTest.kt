@@ -1,7 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.OrderContainerRepositoryImpl
-import com.challenge.nauta_challenge.core.exception.NotFoundException
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderContainerDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderContainerEntity
 import io.mockk.every
@@ -39,7 +39,7 @@ class OrderContainerRepositoryImplTest {
 
         every { orderContainerDao.save(orderContainerEntity) }.returns(Mono.empty())
 
-        assertFailsWith<NotFoundException>("OrderContainer not saved") {
+        assertFailsWith<ModelNotSavedException>("OrderContainer not saved") {
             orderContainerRepository.save(orderId, containerId)
         }
     }

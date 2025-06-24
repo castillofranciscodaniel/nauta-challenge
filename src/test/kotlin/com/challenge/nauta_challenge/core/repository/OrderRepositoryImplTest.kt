@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.OrderRepositoryImpl
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderEntity
@@ -43,7 +44,7 @@ class OrderRepositoryImplTest {
 
         every { orderDao.save(orderEntity) }.returns(Mono.empty())
 
-        assertFailsWith<Exception>("Order not saved") {
+        assertFailsWith<ModelNotSavedException>("Order not saved") {
             orderRepository.save(order)
         }
     }

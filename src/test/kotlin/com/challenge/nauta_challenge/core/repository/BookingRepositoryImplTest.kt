@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.BookingRepositoryImpl
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.BookingEntity
@@ -41,7 +42,7 @@ class BookingRepositoryImplTest {
 
         every { bookingDao.save(bookingEntity) }.returns(Mono.empty())
 
-        assertFailsWith<Exception>("Booking not saved") {
+        assertFailsWith<ModelNotSavedException>("Booking not saved") {
             bookingRepository.save(booking)
         }
     }

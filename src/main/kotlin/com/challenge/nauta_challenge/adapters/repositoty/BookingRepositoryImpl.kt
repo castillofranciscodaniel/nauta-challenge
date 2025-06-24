@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge.adapters.repositoty
 
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.BookingDao
@@ -16,7 +17,7 @@ class BookingRepositoryImpl(
     override suspend fun save(booking: Booking): Booking {
         val bookingEntity = BookingEntity.fromModel(booking)
         return bookingDao.save(bookingEntity).awaitSingleOrNull()?.toModel()
-            ?: throw Exception("Booking not saved")
+            ?: throw ModelNotSavedException("Booking not saved")
     }
 
     override suspend fun findByBookingNumberAndUserId(bookingNumber: String, userId: Long): Booking? =

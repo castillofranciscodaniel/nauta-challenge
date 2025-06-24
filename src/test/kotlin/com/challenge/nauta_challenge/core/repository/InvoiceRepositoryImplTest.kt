@@ -1,6 +1,7 @@
 package com.challenge.nauta_challenge.core.repository
 
 import com.challenge.nauta_challenge.adapters.repositoty.InvoiceRepositoryImpl
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.infrastructure.repository.dao.InvoiceDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.InvoiceEntity
@@ -42,7 +43,7 @@ class InvoiceRepositoryImplTest {
 
         every { invoiceDao.save(invoiceEntity) }.returns(Mono.empty())
 
-        assertFailsWith<Exception>("Invoice not saved") {
+        assertFailsWith<ModelNotSavedException>("Invoice not saved") {
             invoiceRepository.save(invoice)
         }
     }

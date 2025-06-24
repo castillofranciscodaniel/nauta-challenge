@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge.adapters.repositoty
 
+import com.challenge.nauta_challenge.core.exception.ModelNotSavedException
 import com.challenge.nauta_challenge.core.model.User
 import com.challenge.nauta_challenge.core.repository.UserRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.UserDao
@@ -23,10 +24,8 @@ class UserRepositoryImpl(
             .awaitSingleOrNull() ?: false
 
     override suspend fun save(user: User): User {
-        val userEntity = userDao.save(UserEntity.fromModel(user))
-            .awaitSingleOrNull() ?: throw IllegalStateException("Failed to save user")
-
-        return userEntity.toModel()
+        return userDao.save(UserEntity.fromModel(user))
+            .awaitSingleOrNull()?.toModel() ?: throw ModelNotSavedException("Failed to save user")
     }
 
 }
