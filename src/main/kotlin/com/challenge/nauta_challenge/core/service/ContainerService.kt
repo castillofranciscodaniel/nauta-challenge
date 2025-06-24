@@ -25,17 +25,18 @@ class ContainerService(
         return Flux.fromIterable(containers)
             .flatMap { container ->
                 containerRepository.findByContainerNumberAndBookingId(container.containerNumber, bookingId)
-                    .switchIfEmpty(
-                        containerRepository.save(container.copy(bookingId = bookingId))
-                            .doOnSuccess { saved ->
-                                logger.info("[saveContainersForBooking] Saved container: id=${saved.id}, containerNumber=${saved.containerNumber}")
-                            }
-                    )
-                    .doOnSuccess { found ->
-                        if (found != null) {
-                            logger.debug("[saveContainersForBooking] Container already exists: id=${found.id}, containerNumber=${found.containerNumber}")
-                        }
+                    .map { existingContainer ->
+                        logger.debug("[saveContainersForBooking] Container already exists: id=${existingContainer.id}, containerNumber=${existingContainer.containerNumber}")
+                        existingContainer
                     }
+                    .switchIfEmpty(
+                        Mono.defer {
+                            containerRepository.save(container.copy(bookingId = bookingId))
+                                .doOnSuccess { saved ->
+                                    logger.info("[saveContainersForBooking] Saved container: id=${saved.id}, containerNumber=${saved.containerNumber}")
+                                }
+                        }
+                    )
             }
             .collectList()
             .doOnSuccess { savedList -> logger.info("[saveContainersForBooking] Successfully saved/found ${savedList.size} containers") }

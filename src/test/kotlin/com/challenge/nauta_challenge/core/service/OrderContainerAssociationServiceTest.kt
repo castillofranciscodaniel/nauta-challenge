@@ -15,11 +15,12 @@ import reactor.test.StepVerifier
 @SpringBootTest
 class OrderContainerAssociationServiceTest {
 
+    // Arrange
+    val orderContainerRepository = mockk<OrderContainerRepository>()
+    val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
+
     @Test
     fun createAssociationsCorrectlyOneOrderToMultipleContainers() {
-        // Arrange
-        val orderContainerRepository = mockk<OrderContainerRepository>()
-        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
         val bookingNumber = "BOOK123"
         val orderId = 1L
@@ -57,9 +58,6 @@ class OrderContainerAssociationServiceTest {
 
     @Test
     fun createAssociationsCorrectlyMultipleOrdersToOneContainer() {
-        // Arrange
-        val orderContainerRepository = mockk<OrderContainerRepository>()
-        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
         val bookingNumber = "BOOK123"
         val orderId1 = 1L
@@ -97,9 +95,6 @@ class OrderContainerAssociationServiceTest {
 
     @Test
     fun doNotCreateAssociationIfAlreadyExists() {
-        // Arrange
-        val orderContainerRepository = mockk<OrderContainerRepository>()
-        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
         val bookingNumber = "BOOK123"
         val orderId = 1L
@@ -125,9 +120,6 @@ class OrderContainerAssociationServiceTest {
 
     @Test
     fun doNotCreateAssociationsWhenNoOrders() {
-        // Arrange
-        val orderContainerRepository = mockk<OrderContainerRepository>()
-        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
         val bookingNumber = "BOOK123"
         val containerId = 1L
@@ -150,9 +142,6 @@ class OrderContainerAssociationServiceTest {
 
     @Test
     fun doNotCreateAssociationsWhenNoContainers() {
-        // Arrange
-        val orderContainerRepository = mockk<OrderContainerRepository>()
-        val orderContainerAssociationService = OrderContainerAssociationService(orderContainerRepository)
 
         val bookingNumber = "BOOK123"
         val orderId = 1L

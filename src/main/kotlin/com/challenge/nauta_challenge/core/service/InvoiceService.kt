@@ -18,17 +18,18 @@ class InvoiceService(private val invoiceRepository: InvoiceRepository) {
         return Flux.fromIterable(invoices)
             .flatMap { invoice ->
                 invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId)
-                    .switchIfEmpty(
-                        invoiceRepository.save(invoice.copy(orderId = orderId))
-                            .doOnSuccess { saved ->
-                                logger.info("[saveInvoicesForOrder] Saved invoice: id=${saved.id}, invoiceNumber=${saved.invoiceNumber}")
-                            }
-                    )
-                    .doOnSuccess { found ->
-                        if (found != null) {
-                            logger.debug("[saveInvoicesForOrder] Invoice already exists: id=${found.id}, invoiceNumber=${found.invoiceNumber}")
-                        }
+                    .map { existingInvoice ->
+                        logger.debug("[saveInvoicesForOrder] Invoice already exists: id=${existingInvoice.id}, invoiceNumber=${existingInvoice.invoiceNumber}")
+                        existingInvoice
                     }
+                    .switchIfEmpty(
+                        Mono.defer {
+                            invoiceRepository.save(invoice.copy(orderId = orderId))
+                                .doOnSuccess { saved ->
+                                    logger.info("[saveInvoicesForOrder] Saved invoice: id=${saved.id}, invoiceNumber=${saved.invoiceNumber}")
+                                }
+                        }
+                    )
                     .doOnError { error ->
                         logger.error("[saveInvoicesForOrder] Error processing invoice: invoiceNumber=${invoice.invoiceNumber}", error)
                     }

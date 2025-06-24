@@ -24,24 +24,40 @@ class OrderService(
     fun saveOrdersForBooking(orders: List<Order>, bookingId: Long): Mono<List<Order>> {
         logger.info("[saveOrdersForBooking] Saving ${orders.size} orders for bookingId=$bookingId")
 
+        if (orders.isEmpty()) {
+            return Mono.just(emptyList())
+        }
+
         return Flux.fromIterable(orders)
-            .flatMap { order ->
+            .concatMap { order ->
+                // Primero buscar si la orden ya existe
                 orderRepository.findByPurchaseNumberAndBookingId(order.purchaseNumber, bookingId)
-                    .switchIfEmpty(
-                        orderRepository.save(order.copy(bookingId = bookingId))
-                            .doOnSuccess { saved -> logger.info("[saveOrdersForBooking] Created new order: id=${saved.id}, purchaseNumber=${saved.purchaseNumber}") }
-                    )
-                    .doOnSuccess { existing ->
-                        if (existing != null && existing.id != null) {
-                            logger.debug("[saveOrdersForBooking] Order already exists: id=${existing.id}, purchaseNumber=${existing.purchaseNumber}")
-                        }
-                    }
-                    .flatMap { orderToUse ->
-                        invoiceService.saveInvoicesForOrder(order.invoices, orderToUse.id!!)
-                            .map { invoicesSaved ->
-                                orderToUse.copy(invoices = invoicesSaved)
+                    .flatMap { existingOrder ->
+                        // La orden existe, procesamos solo las facturas
+                        logger.debug("[saveOrdersForBooking] Order already exists: id=${existingOrder.id}, purchaseNumber=${existingOrder.purchaseNumber}")
+
+                        // Guardar facturas asociadas a la orden existente
+                        invoiceService.saveInvoicesForOrder(order.invoices, existingOrder.id!!)
+                            .map { savedInvoices ->
+                                existingOrder.copy(invoices = savedInvoices)
                             }
                     }
+                    .switchIfEmpty(
+                        // La orden no existe, creamos una nueva
+                        Mono.defer {
+                            val orderToSave = order.copy(bookingId = bookingId)
+                            orderRepository.save(orderToSave)
+                                .flatMap { savedOrder ->
+                                    logger.info("[saveOrdersForBooking] Created new order: id=${savedOrder.id}, purchaseNumber=${savedOrder.purchaseNumber}")
+
+                                    // Guardar facturas asociadas a la nueva orden
+                                    invoiceService.saveInvoicesForOrder(order.invoices, savedOrder.id!!)
+                                        .map { savedInvoices ->
+                                            savedOrder.copy(invoices = savedInvoices)
+                                        }
+                                }
+                        }
+                    )
             }
             .collectList()
             .doOnSuccess { savedOrders -> logger.info("[saveOrdersForBooking] Successfully processed ${savedOrders.size} orders for bookingId=$bookingId") }

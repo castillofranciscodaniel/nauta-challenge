@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 @SpringBootTest
 class OrderServiceTest {
 
-    private val orderRepository = mockk<OrderRepository>()
+    private val orderRepository = mockk<OrderRepository>(relaxed = true)
     private val invoiceService = mockk<InvoiceService>()
     private val bookingRepository = mockk<BookingRepository>()
     private val userLoggedService = mockk<UserLoggedService>()
@@ -57,6 +57,7 @@ class OrderServiceTest {
         every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber, bookingId) } returns Mono.just(
             existingOrder
         )
+        every { orderRepository.save(any()) } returns Mono.just(existingOrder)
         every { invoiceService.saveInvoicesForOrder(listOf(invoice), 10L) } returns Mono.just(listOf(savedInvoice))
 
         // Act & Assert
@@ -68,6 +69,9 @@ class OrderServiceTest {
                 assertEquals(bookingId, result[0].bookingId)
                 assertEquals(1, result[0].invoices.size)
                 assertEquals(20L, result[0].invoices[0].id)
+
+                // Verificar dentro del flujo reactivo que save no fue llamado
+                verify(exactly = 0) { orderRepository.save(any()) }
             }
             .verifyComplete()
     }
@@ -153,10 +157,10 @@ class OrderServiceTest {
         val savedInvoice1 = Invoice(id = 30L, invoiceNumber = "INV-001", orderId = 10L)
         val savedInvoice2 = Invoice(id = 40L, invoiceNumber = "INV-002", orderId = 20L)
 
-        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber1, bookingId) } returns Mono.just(
-            existingOrder
-        )
+        every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber1, bookingId) } returns Mono.just(existingOrder)
         every { orderRepository.findByPurchaseNumberAndBookingId(purchaseNumber2, bookingId) } returns Mono.empty()
+        // Mock adicional para evitar errores en WebFlux, aunque no debería llamarse para order1
+        every { orderRepository.save(order1.copy(bookingId = bookingId)) } returns Mono.just(existingOrder)
         every { orderRepository.save(order2.copy(bookingId = bookingId)) } returns Mono.just(savedOrder)
         every { invoiceService.saveInvoicesForOrder(listOf(invoice1), 10L) } returns Mono.just(listOf(savedInvoice1))
         every { invoiceService.saveInvoicesForOrder(listOf(invoice2), 20L) } returns Mono.just(listOf(savedInvoice2))
@@ -178,6 +182,10 @@ class OrderServiceTest {
                 assertEquals(40L, result[1].invoices[0].id)
             }
             .verifyComplete()
+
+        // Verificar que save solo se llamó para la segunda orden, no para la primera que ya existía
+        verify(exactly = 0) { orderRepository.save(order1.copy(bookingId = bookingId)) }
+        verify(exactly = 1) { orderRepository.save(order2.copy(bookingId = bookingId)) }
     }
 
     @Test

@@ -17,15 +17,21 @@ class BookingService(private val bookingRepository: BookingRepository) {
         logger.info("[findOrSaveBooking] Looking for booking: bookingNumber=${booking.bookingNumber}, userId=$userId")
 
         return bookingRepository.findByBookingNumberAndUserId(booking.bookingNumber, userId)
-            .switchIfEmpty(
-                bookingRepository.save(booking.copy(userId = userId))
-                    .doOnSubscribe { logger.info("[findOrSaveBooking] Booking not found, creating new: bookingNumber=${booking.bookingNumber}") }
-            )
-            .doOnSuccess { foundOrSavedBooking ->
-                if (foundOrSavedBooking.id != null) {
-                    logger.info("[findOrSaveBooking] ${if (foundOrSavedBooking.id == booking.id) "Found" else "Saved"} booking: id=${foundOrSavedBooking.id}, bookingNumber=${foundOrSavedBooking.bookingNumber}")
-                }
+            .flatMap { existingBooking ->
+                // Si encontramos un booking existente, simplemente lo devolvemos
+                logger.info("[findOrSaveBooking] Found existing booking: id=${existingBooking.id}, bookingNumber=${existingBooking.bookingNumber}")
+                Mono.just(existingBooking)
             }
+            .switchIfEmpty(
+                // Solo si no encontramos un booking, creamos uno nuevo
+                Mono.defer {
+                    logger.info("[findOrSaveBooking] Booking not found, creating new: bookingNumber=${booking.bookingNumber}")
+                    bookingRepository.save(booking.copy(userId = userId))
+                        .doOnSuccess { savedBooking ->
+                            logger.info("[findOrSaveBooking] Saved new booking: id=${savedBooking.id}, bookingNumber=${savedBooking.bookingNumber}")
+                        }
+                }
+            )
             .onErrorMap { e ->
                 logger.error("[findOrSaveBooking] Error processing booking: bookingNumber=${booking.bookingNumber}", e)
                 RuntimeException("Error processing booking: ${e.message}")

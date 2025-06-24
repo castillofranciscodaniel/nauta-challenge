@@ -4,6 +4,7 @@ import com.challenge.nauta_challenge.core.model.Invoice
 import com.challenge.nauta_challenge.core.repository.InvoiceRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import reactor.core.publisher.Flux
@@ -14,7 +15,7 @@ import kotlin.test.assertEquals
 @SpringBootTest
 class InvoiceServiceTest {
 
-    private val invoiceRepository = mockk<InvoiceRepository>()
+    private val invoiceRepository = mockk<InvoiceRepository>(relaxed = true)
     private val invoiceService = InvoiceService(invoiceRepository)
 
     @Test
@@ -62,6 +63,8 @@ class InvoiceServiceTest {
         )
 
         every { invoiceRepository.findByInvoiceNumberAndOrderId(invoice.invoiceNumber, orderId) } returns Mono.just(existingInvoice)
+        // Mock adicional para evitar errores en WebFlux, aunque no debería llamarse
+        every { invoiceRepository.save(any()) } returns Mono.just(existingInvoice)
 
         // Act & Assert
         StepVerifier.create(invoiceService.saveInvoicesForOrder(listOf(invoice), orderId))
@@ -72,6 +75,9 @@ class InvoiceServiceTest {
                 assertEquals(orderId, result[0].orderId)
             }
             .verifyComplete()
+
+        // Verificamos que save no fue llamado
+        verify(exactly = 0) { invoiceRepository.save(any()) }
     }
 
     @Test
