@@ -29,7 +29,7 @@ class ContainerService(
     suspend fun findAllContainersForCurrentUser(): Flow<Container> {
         val currentUser = userLoggedService.getCurrentUserId()
 
-        // Obtenemos todos los contenedores del usuario con una sola consulta
+        // Get all containers for the user with a single query
         return containerRepository.findAllByUserId(currentUser.id!!)
     }
 
@@ -39,7 +39,7 @@ class ContainerService(
 
         return orderRepository.findOrdersByContainerIdAndUserId(containerId, currentUser.id!!)
             .map { order ->
-                // Para cada orden, cargar sus facturas asociadas
+                // For each order, load its associated invoices
                 val invoices = invoiceService.findAllByOrderId(order.id!!).toList()
                 order.copy(invoices = invoices)
             }

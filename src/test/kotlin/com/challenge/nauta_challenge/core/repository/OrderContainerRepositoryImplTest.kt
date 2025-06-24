@@ -18,21 +18,21 @@ class OrderContainerRepositoryImplTest {
     private val orderContainerRepository: OrderContainerRepository = OrderContainerRepositoryImpl(orderContainerDao)
 
     @Test
-    fun guardaRelacionOrdenContenedorExitosamente() = runTest {
+    fun savesOrderContainerRelationshipSuccessfully() = runTest {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
 
         every { orderContainerDao.save(orderContainerEntity) }.returns(Mono.just(orderContainerEntity))
 
-        val resultado = orderContainerRepository.save(orderId, containerId)
+        val result = orderContainerRepository.save(orderId, containerId)
 
-        assertEquals(orderId, resultado.orderId)
-        assertEquals(containerId, resultado.containerId)
+        assertEquals(orderId, result.orderId)
+        assertEquals(containerId, result.containerId)
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaRelacion() = runTest {
+    fun throwsExceptionWhenRelationshipNotSaved() = runTest {
         val orderId = 1L
         val containerId = 2L
         val orderContainerEntity = OrderContainerEntity(orderId = orderId, containerId = containerId)
@@ -45,38 +45,38 @@ class OrderContainerRepositoryImplTest {
     }
 
     @Test
-    fun verificaExistenciaDeRelacionCuandoExiste() = runTest {
+    fun verifiesRelationshipExistenceWhenItExists() = runTest {
         val orderId = 1L
         val containerId = 2L
 
         every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.just(true))
 
-        val resultado = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
+        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
 
-        assertTrue(resultado)
+        assertTrue(result)
     }
 
     @Test
-    fun verificaExistenciaDeRelacionCuandoNoExiste() = runTest {
+    fun verifiesRelationshipExistenceWhenItDoesNotExist() = runTest {
         val orderId = 1L
         val containerId = 2L
 
         every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.just(false))
 
-        val resultado = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
+        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
 
-        assertFalse(resultado)
+        assertFalse(result)
     }
 
     @Test
-    fun devuelveFalseCuandoExistsByOrderIdAndContainerIdRetornaMonoEmpty() = runTest {
+    fun returnsFalseWhenExistsByOrderIdAndContainerIdReturnsMonoEmpty() = runTest {
         val orderId = 1L
         val containerId = 2L
 
         every { orderContainerDao.existsByOrderIdAndContainerId(orderId, containerId) }.returns(Mono.empty())
 
-        val resultado = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
+        val result = orderContainerRepository.existsByOrderIdAndContainerId(orderId, containerId)
 
-        assertFalse(resultado)
+        assertFalse(result)
     }
 }

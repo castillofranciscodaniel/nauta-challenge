@@ -16,7 +16,7 @@ class OrderContainerAssociationService(private val orderContainerRepository: Ord
             containers.size == 1 && orders.isNotEmpty() ->
                 associateManyOrdersToOneContainer(orders, containers.first())
 
-            else -> println("Relación ambigua en booking $bookingNumber. No se crean asociaciones automáticas.")
+            else -> println("Ambiguous relationship in booking $bookingNumber. No automatic associations created.")
         }
     }
 

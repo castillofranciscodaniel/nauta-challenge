@@ -22,21 +22,21 @@ class InvoiceRepositoryImplTest {
     private val invoiceRepository: InvoiceRepository = InvoiceRepositoryImpl(invoiceDao)
 
     @Test
-    fun saveInvoiceOk() = runTest {
+    fun saveInvoiceSuccessfully() = runTest {
         val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
         val invoiceEntity = InvoiceEntity.fromModel(invoice)
 
         every { invoiceDao.save(invoiceEntity) }.returns(Mono.just(invoiceEntity.copy(id = 1)))
 
-        val resultado = invoiceRepository.save(invoice)
+        val result = invoiceRepository.save(invoice)
 
-        assertEquals(1, resultado.id)
-        assertEquals("FAC123", resultado.invoiceNumber)
-        assertEquals(1, resultado.orderId)
+        assertEquals(1, result.id)
+        assertEquals("FAC123", result.invoiceNumber)
+        assertEquals(1, result.orderId)
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaFactura(): Unit = runTest {
+    fun throwsExceptionWhenInvoiceNotSaved(): Unit = runTest {
         val invoice = Invoice(id = null, invoiceNumber = "FAC123", orderId = 1)
         val invoiceEntity = InvoiceEntity.fromModel(invoice)
 

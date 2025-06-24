@@ -4,11 +4,9 @@ import com.challenge.nauta_challenge.core.model.Container
 import com.challenge.nauta_challenge.core.model.Order
 import com.challenge.nauta_challenge.core.repository.BookingRepository
 import com.challenge.nauta_challenge.core.repository.ContainerRepository
-import com.challenge.nauta_challenge.core.repository.OrderContainerRepository
 import com.challenge.nauta_challenge.core.repository.OrderRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import org.springframework.stereotype.Service
@@ -37,10 +35,10 @@ class OrderService(
     suspend fun findAllOrdersForCurrentUser(): Flow<Order> {
         val currentUser = userLoggedService.getCurrentUserId()
 
-        // Obtenemos todas las órdenes del usuario con una sola consulta
+        // Get all orders for the user with a single query
         return orderRepository.findAllByUserId(currentUser.id!!)
             .map { order ->
-                // Para cada orden, cargar sus facturas asociadas
+                // For each order, load its associated invoices
                 val invoices = invoiceService.findAllByOrderId(order.id!!).toList()
                 order.copy(invoices = invoices)
             }

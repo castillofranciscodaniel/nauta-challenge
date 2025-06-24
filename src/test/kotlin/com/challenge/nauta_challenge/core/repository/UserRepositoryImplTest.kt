@@ -20,7 +20,7 @@ class UserRepositoryImplTest {
     private val userRepository: UserRepository = UserRepositoryImpl(userDao)
 
     @Test
-    fun encuentraUsuarioPorEmail() = runTest {
+    fun findsUserByEmail() = runTest {
         val userEntity = UserEntity(
             id = 1,
             email = "test@example.com",
@@ -30,51 +30,51 @@ class UserRepositoryImplTest {
 
         every { userDao.findByEmail("test@example.com") }.returns(Mono.just(userEntity))
 
-        val resultado = userRepository.findByEmail("test@example.com")
+        val result = userRepository.findByEmail("test@example.com")
 
-        assertEquals(1, resultado?.id)
-        assertEquals("test@example.com", resultado?.email)
-        assertEquals("password", resultado?.password)
+        assertEquals(1, result?.id)
+        assertEquals("test@example.com", result?.email)
+        assertEquals("password", result?.password)
     }
 
     @Test
-    fun lanzaExcepcionCuandoUsuarioNoEncontrado(): Unit = runTest {
+    fun returnsNullWhenUserNotFound(): Unit = runTest {
         every { userDao.findByEmail("test@example.com") }.returns(Mono.empty())
 
-        val resultado = userRepository.findByEmail("test@example.com")
+        val result = userRepository.findByEmail("test@example.com")
 
-        assertNull(resultado)
+        assertNull(result)
     }
 
     @Test
-    fun verificaExistenciaDeUsuarioPorEmail() = runTest {
+    fun checksUserExistenceByEmail() = runTest {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.just(true))
 
-        val resultado = userRepository.existsByEmail("test@example.com")
+        val result = userRepository.existsByEmail("test@example.com")
 
-        assertTrue(resultado)
+        assertTrue(result)
     }
 
     @Test
-    fun devuelveFalseCuandoUsuarioNoExiste() = runTest {
+    fun returnsFalseWhenUserDoesNotExist() = runTest {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.just(false))
 
-        val resultado = userRepository.existsByEmail("test@example.com")
+        val result = userRepository.existsByEmail("test@example.com")
 
-        assertFalse(resultado)
+        assertFalse(result)
     }
 
     @Test
-    fun devuelveFalseCuandoExistsByEmailRetornaMonoEmpty() = runTest {
+    fun returnsFalseWhenExistsByEmailReturnsMonoEmpty() = runTest {
         every { userDao.existsByEmail("test@example.com") }.returns(Mono.empty())
 
-        val resultado = userRepository.existsByEmail("test@example.com")
+        val result = userRepository.existsByEmail("test@example.com")
 
-        assertFalse(resultado)
+        assertFalse(result)
     }
 
     @Test
-    fun guardaUsuarioExitosamente() = runTest {
+    fun savesUserSuccessfully() = runTest {
         val user = User(
             id = null,
             email = "test@example.com",
@@ -85,15 +85,15 @@ class UserRepositoryImplTest {
 
         every { userDao.save(userEntity) }.returns(Mono.just(savedUserEntity))
 
-        val resultado = userRepository.save(user)
+        val result = userRepository.save(user)
 
-        assertEquals(1, resultado.id)
-        assertEquals("test@example.com", resultado.email)
-        assertEquals("password", resultado.password)
+        assertEquals(1, result.id)
+        assertEquals("test@example.com", result.email)
+        assertEquals("password", result.password)
     }
 
     @Test
-    fun lanzaExcepcionCuandoNoSeGuardaUsuario(): Unit = runTest {
+    fun throwsExceptionWhenUserNotSaved(): Unit = runTest {
         val user = User(
             id = null,
             email = "test@example.com",

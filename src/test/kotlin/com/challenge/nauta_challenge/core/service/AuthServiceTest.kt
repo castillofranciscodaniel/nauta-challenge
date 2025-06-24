@@ -25,80 +25,80 @@ class AuthServiceTest {
     private val authService = AuthService(userRepository, passwordEncoder, jwtTokenProvider)
 
     @Test
-    fun registraUsuarioCorrectamente() = runTest {
+    fun registerUserSuccessfully() = runTest {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
         val encodedPassword = "encodedPassword"
-        val usuarioConId = User(id = 1, email = "test@example.com", password = encodedPassword)
+        val userWithId = User(id = 1, email = "test@example.com", password = encodedPassword)
         val token = "jwt-token"
 
         coEvery { userRepository.existsByEmail("test@example.com") } returns false
         every { passwordEncoder.encode("password") } returns encodedPassword
-        coEvery { userRepository.save(any()) } returns usuarioConId
+        coEvery { userRepository.save(any()) } returns userWithId
         every { jwtTokenProvider.generateToken("test@example.com", 1) } returns token
 
         // Act
-        val resultado = authService.register(request)
+        val result = authService.register(request)
 
         // Assert
-        assertEquals("jwt-token", resultado.token)
-        assertEquals("test@example.com", resultado.email)
+        assertEquals("jwt-token", result.token)
+        assertEquals("test@example.com", result.email)
     }
 
     @Test
-    fun lanzaExcepcionCuandoEmailYaExiste(): Unit = runTest {
+    fun throwsExceptionWhenEmailAlreadyExists(): Unit = runTest {
         // Arrange
         val request = RegisterRequestDto(email = "test@example.com", password = "password")
         coEvery { userRepository.existsByEmail("test@example.com") } returns true
 
         // Act & Assert
-        assertFailsWith<IllegalArgumentException>("El email ya está registrado") {
+        assertFailsWith<IllegalArgumentException>("Email is already registered") {
             authService.register(request)
         }
     }
 
     @Test
-    fun loginCorrectamente() = runTest {
+    fun loginSuccessfully() = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
-        val usuario = User(id = 1, email = "test@example.com", password = "encodedPassword")
+        val user = User(id = 1, email = "test@example.com", password = "encodedPassword")
         val token = "jwt-token"
 
-        coEvery { userRepository.findByEmail("test@example.com") } returns usuario
+        coEvery { userRepository.findByEmail("test@example.com") } returns user
         every { passwordEncoder.matches("password", "encodedPassword") } returns true
         every { jwtTokenProvider.generateToken("test@example.com", 1) } returns token
 
         // Act
-        val resultado = authService.login(request)
+        val result = authService.login(request)
 
         // Assert
-        assertEquals("jwt-token", resultado.token)
-        assertEquals("test@example.com", resultado.email)
+        assertEquals("jwt-token", result.token)
+        assertEquals("test@example.com", result.email)
     }
 
     @Test
-    fun lanzaExcepcionCuandoUsuarioNoExiste(): Unit = runTest {
+    fun throwsExceptionWhenUserDoesNotExist(): Unit = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
         coEvery { userRepository.findByEmail("test@example.com") } returns null
 
         // Act & Assert
-        assertFailsWith<BadCredentialsException>("Email o contraseña incorrectos") {
+        assertFailsWith<BadCredentialsException>("Incorrect email or password") {
             authService.login(request)
         }
     }
 
     @Test
-    fun lanzaExcepcionCuandoContraseñaIncorrecta(): Unit = runTest {
+    fun throwsExceptionWhenPasswordIsIncorrect(): Unit = runTest {
         // Arrange
         val request = LoginRequestDto(email = "test@example.com", password = "password")
-        val usuario = User(id = 1, email = "test@example.com", password = "encodedPassword")
+        val user = User(id = 1, email = "test@example.com", password = "encodedPassword")
 
-        coEvery { userRepository.findByEmail("test@example.com") } returns usuario
+        coEvery { userRepository.findByEmail("test@example.com") } returns user
         every { passwordEncoder.matches("password", "encodedPassword") } returns false
 
         // Act & Assert
-        assertFailsWith<BadCredentialsException>("Email o contraseña incorrectos") {
+        assertFailsWith<BadCredentialsException>("Incorrect email or password") {
             authService.login(request)
         }
     }

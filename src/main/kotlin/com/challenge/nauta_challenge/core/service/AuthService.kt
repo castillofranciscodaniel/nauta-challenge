@@ -19,36 +19,36 @@ class AuthService(
 
     suspend fun register(request: RegisterRequestDto): AuthResponseDto {
         if (userRepository.existsByEmail(request.email)) {
-            throw IllegalArgumentException("El email ya está registrado")
+            throw IllegalArgumentException("Email is already registered")
         }
 
-        val usuario = User(
+        val user = User(
             email = request.email,
             password = passwordEncoder.encode(request.password)
         )
 
-        val savedUsuario = userRepository.save(usuario)
-        val token = jwtTokenProvider.generateToken(savedUsuario.email, savedUsuario.id!!)
+        val savedUser = userRepository.save(user)
+        val token = jwtTokenProvider.generateToken(savedUser.email, savedUser.id!!)
 
         return AuthResponseDto(
             token = token,
-            email = savedUsuario.email
+            email = savedUser.email
         )
     }
 
     suspend fun login(request: LoginRequestDto): AuthResponseDto {
-        val usuario = userRepository.findByEmail(request.email)
-            ?: throw BadCredentialsException("Email o contraseña incorrectos")
+        val user = userRepository.findByEmail(request.email)
+            ?: throw BadCredentialsException("Incorrect email or password")
 
-        if (!passwordEncoder.matches(request.password, usuario.password)) {
-            throw BadCredentialsException("Email o contraseña incorrectos")
+        if (!passwordEncoder.matches(request.password, user.password)) {
+            throw BadCredentialsException("Incorrect email or password")
         }
 
-        val token = jwtTokenProvider.generateToken(usuario.email, usuario.id!!)
+        val token = jwtTokenProvider.generateToken(user.email, user.id!!)
 
         return AuthResponseDto(
             token = token,
-            email = usuario.email
+            email = user.email
         )
     }
 }

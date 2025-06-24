@@ -31,7 +31,7 @@ class OrderServiceTest {
     )
 
     @Test
-    fun devuelveOrdenExistenteSiYaEstáAlmacenada(): Unit = runTest {
+    fun returnsExistingOrderIfAlreadyStored(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -72,7 +72,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun guardaOrderCuandoNoExiste(): Unit = runTest {
+    fun savesOrderWhenItDoesNotExist(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber = "PO-123"
@@ -114,7 +114,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun procesaMultiplesOrdenesCorrectamente(): Unit = runTest {
+    fun processesMultipleOrdersCorrectly(): Unit = runTest {
         // Arrange
         val bookingId = 1L
         val purchaseNumber1 = "PO-123"
@@ -178,7 +178,7 @@ class OrderServiceTest {
     }
 
     @Test
-    fun manejaListaVaciaCorrectamente(): Unit = runTest {
+    fun handlesEmptyListCorrectly(): Unit = runTest {
         // Arrange
         val bookingId = 1L
 
@@ -262,7 +262,7 @@ class OrderServiceTest {
         val container1 = Container(id = 101L, containerNumber = "CONT-001", bookingId = bookingId)
         val container2 = Container(id = 102L, containerNumber = "CONT-002", bookingId = bookingId)
 
-        // Mock usuario actual
+        // Mock current user
         coEvery { userLoggedService.getCurrentUserId() } returns user
 
         coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
@@ -292,7 +292,7 @@ class OrderServiceTest {
 
         val user = User(id = userId, email = "user@example.com", password = "password")
 
-        // Mock usuario actual
+        // Mock current user
         coEvery { userLoggedService.getCurrentUserId() } returns user
 
         coEvery { containerRepository.findContainersByPurchaseNumberAndUserId(purchaseNumber, userId) } returns
