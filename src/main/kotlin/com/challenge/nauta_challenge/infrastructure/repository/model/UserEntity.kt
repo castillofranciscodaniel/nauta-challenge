@@ -18,7 +18,7 @@ data class UserEntity(
         fun fromModel(model: User) = UserEntity(
             id = model.id,
             email = model.email,
-            password = model.password,
+            password = model.password!!,
             createAt = model.createAt
         )
     }

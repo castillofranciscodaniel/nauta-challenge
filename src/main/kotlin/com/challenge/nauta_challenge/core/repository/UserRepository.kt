@@ -5,7 +5,7 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface UserRepository {
-    suspend fun findByEmail(email: String): User
+    suspend fun findByEmail(email: String): User?
     suspend fun existsByEmail(email: String): Boolean
     suspend fun save(user: User): User
 }

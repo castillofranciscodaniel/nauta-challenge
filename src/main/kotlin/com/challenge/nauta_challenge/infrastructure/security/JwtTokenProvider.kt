@@ -15,12 +15,13 @@ class JwtTokenProvider {
 
     private val key = Keys.secretKeyFor(SignatureAlgorithm.HS512)
 
-    fun generateToken(email: String): String {
+    fun generateToken(email: String, userId: Long): String {
         val now = Date()
         val expiryDate = Date(now.time + jwtExpiration)
 
         return Jwts.builder()
             .setSubject(email)
+            .claim("userId", userId)  // Añadimos el userId como claim
             .setIssuedAt(now)
             .setExpiration(expiryDate)
             .signWith(key)
@@ -43,5 +44,18 @@ class JwtTokenProvider {
             .parseClaimsJws(token)
             .body
             .subject
+    }
+
+    fun getClaimFromToken(token: String, claimName: String): Any? {
+        return try {
+            Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .body
+                .get(claimName)
+        } catch (e: Exception) {
+            null
+        }
     }
 }
