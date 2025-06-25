@@ -7,7 +7,6 @@ import com.challenge.nauta_challenge.core.repository.OrderRepository
 import com.challenge.nauta_challenge.infrastructure.repository.dao.OrderDao
 import com.challenge.nauta_challenge.infrastructure.repository.model.OrderEntity
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart

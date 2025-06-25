@@ -312,3 +312,19 @@ El proyecto incluye el servicio `kafka-ui` en el `docker-compose.yml`, que te pe
   - Ver el estado del clúster y los consumidores
 
 Esta herramienta es muy útil para depuración y monitoreo durante el desarrollo.
+
+### Reglas de asociación entre órdenes y contenedores
+
+El servicio `OrderContainerAssociationService` implementa las reglas para asociar órdenes y contenedores de manera automática según las siguientes condiciones:
+
+1. **Una orden con múltiples contenedores**: Si hay una sola orden y múltiples contenedores, todos los contenedores se asocian a esa orden.
+2. **Múltiples órdenes con un contenedor**: Si hay un solo contenedor y múltiples órdenes, todas las órdenes se asocian a ese contenedor.
+3. **Relación ambigua**: Si no se cumple ninguna de las condiciones anteriores, no se crean asociaciones automáticas y se registra una advertencia en los logs.
+
+Estas reglas aseguran que las asociaciones sean consistentes y manejan casos en los que la relación no es clara.
+
+#### Validaciones para evitar duplicados
+
+El servicio `OrderContainerAssociationService` incluye validaciones para evitar guardar asociaciones duplicadas entre órdenes y contenedores. Antes de crear una nueva asociación, se verifica si ya existe mediante el método `existsByOrderIdAndContainerId` del repositorio. Si la asociación ya existe, no se guarda nuevamente y se registra un mensaje en los logs indicando que la asociación ya estaba presente.
+
+Además, el sistema asegura que no se puedan guardar contenedores, órdenes o facturas (invoices) si ya existen previamente en la relación correspondiente. Esto garantiza la integridad de los datos y evita duplicados innecesarios en las asociaciones.
