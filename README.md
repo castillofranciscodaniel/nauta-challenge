@@ -237,3 +237,27 @@ El informe de cobertura se generará en `build/reports/jacoco/test/html/index.ht
 - El proyecto utiliza R2DBC para operaciones de base de datos reactivas
 - Se implementa autenticación JWT para proteger los endpoints
 - Se aplica programación reactiva con Kotlin Coroutines y Spring WebFlux
+
+## Simulación de fallos en el guardado de bookings
+
+Para facilitar pruebas de resiliencia y reprocesamiento, el método interno `processBookingSave` en el servicio `BookingSaveOrchestrationService` incluye una simulación de fallos aleatorios:
+
+```kotlin
+private suspend fun processBookingSave(booking: Booking): Booking {
+    val userId = runCatching { userLoggedService.getCurrentUser().id }
+        .getOrElse { booking.userId }
+    // se lanza una excepcion de forma aleatoria para simular fallos en el proceso
+    // con probabilidad 3 de 10
+    if (Math.random() < 0.3) {
+        throw RuntimeException("Simulated failure during booking save process")
+    }
+    // ...
+}
+```
+
+**¿Qué significa esto?**
+- Cada vez que se intenta guardar un booking, existe un 30% de probabilidad de que se lance una excepción simulando un fallo en el proceso.
+- Esto permite probar el flujo de resiliencia: cuando ocurre un fallo, el booking se envía a Kafka para su reprocesamiento automático.
+- El método también obtiene el `userId` del usuario logueado si está disponible; si no, utiliza el `userId` incluido en el propio objeto `Booking` (útil para reprocesos asíncronos desde Kafka, donde no hay contexto de usuario).
+
+Esta lógica es útil para validar que el sistema maneja correctamente los errores y reprocesa los mensajes fallidos, asegurando la robustez de la solución ante fallos inesperados.

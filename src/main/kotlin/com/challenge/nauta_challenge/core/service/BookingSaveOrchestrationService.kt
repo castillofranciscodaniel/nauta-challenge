@@ -1,5 +1,6 @@
 package com.challenge.nauta_challenge.core.service
 
+import com.challenge.nauta_challenge.core.exception.BookingDeferredException
 import com.challenge.nauta_challenge.core.model.Booking
 import com.challenge.nauta_challenge.core.repository.MessagePublisherRepository
 import com.challenge.nauta_challenge.infrastructure.config.KafkaConfig
@@ -33,19 +34,15 @@ class BookingSaveOrchestrationService(
             )
 
             logger.info("[saveBooking] Enviando booking a cola de reprocesamiento: {}", booking.bookingNumber)
+            val userId = booking.userId ?: userLoggedService.getCurrentUser().id
+            val bookingWithUser = booking.copy(userId = userId)
             messagePublisher.publishMessage(
                 topic = KafkaConfig.FAILED_BOOKINGS_TOPIC,
-                message = booking
+                message = bookingWithUser
             )
 
-            // Devolvemos una respuesta parcial para informar al cliente que se procesará posteriormente
-            Booking(
-                id = null,
-                bookingNumber = booking.bookingNumber,
-                userId = null,
-                containers = emptyList(),
-                orders = emptyList(),
-            )
+            // Lanzamos excepción personalizada para que el ControllerAdvice la capture
+            throw BookingDeferredException(booking.bookingNumber)
         }
     }
 
@@ -53,7 +50,14 @@ class BookingSaveOrchestrationService(
      * Método interno para el procesamiento real del booking
      */
     private suspend fun processBookingSave(booking: Booking): Booking {
-        val userId = userLoggedService.getCurrentUser().id
+        val userId = runCatching { userLoggedService.getCurrentUser().id  }
+            .getOrElse { booking.userId }
+
+        // se lanza una excepcion de forma aleatoria para simular fallos en el proceso
+        // con probabilidad 3 de 10
+        if (Math.random() < 0.3) {
+            throw RuntimeException("Simulated failure during booking save process")
+        }
 
         val bookingSaved = bookingService.findOrSaveBooking(
             booking = booking,
