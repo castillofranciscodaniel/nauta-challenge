@@ -49,6 +49,10 @@ dependencies {
 	testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 	testImplementation("io.mockk:mockk:1.14.2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	// Kafka dependencies
+	implementation("org.springframework.kafka:spring-kafka")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
 }
 
 kotlin {

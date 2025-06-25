@@ -9,6 +9,7 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+      - kafka
     environment:
       - SPRING_DATASOURCE_URL=r2dbc:postgresql://postgres:5432/nauta_db
       - SPRING_DATASOURCE_USERNAME=postgres
@@ -17,8 +18,10 @@ services:
       - SPRING_R2DBC_USERNAME=postgres
       - SPRING_R2DBC_PASSWORD=postgres
       - SPRING_FLYWAY_URL=jdbc:postgresql://postgres:5432/nauta_db
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - nauta-network
+      - kafka-network  # Añadimos la red de kafka para conectividad desde la app
 
   postgres:
     image: postgres:15-alpine
@@ -39,8 +42,56 @@ services:
       timeout: 5s
       retries: 5
 
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "22181:2181"
+    networks:
+      - nauta-network
+      - kafka-network
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    container_name: kafka
+    ports:
+      - "9093:9093"
+      - "9092:9092"  # Exponiendo puerto interno para acceso directo
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,OUTSIDE://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CREATE_TOPICS: "failed-bookings:3:1"
+    depends_on:
+      - zookeeper
+    networks:
+      - nauta-network
+      - kafka-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+    networks:
+      - nauta-network
+      - kafka-network
+
 volumes:
   postgres-data:
 
 networks:
   nauta-network:
+  kafka-network:
+    name: kafka-network
+    external: true

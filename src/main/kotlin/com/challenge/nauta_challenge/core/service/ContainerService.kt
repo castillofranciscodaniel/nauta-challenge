@@ -22,6 +22,7 @@ class ContainerService(
         logger.info("[saveContainersForBooking] Guardando {} contenedores para booking ID: {}", containers.size, bookingId)
 
         return try {
+            throw RuntimeException("Simulación de error para pruebas") // Simulación de error para pruebas
             val result = containers.map { container ->
                 containerRepository.findByContainerNumberAndBookingId(container.containerNumber, bookingId)
                     ?: containerRepository.save(container.copy(bookingId = bookingId))

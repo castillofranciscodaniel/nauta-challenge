@@ -14,9 +14,9 @@ Este proyecto es una API RESTful construida con Spring Boot y Kotlin que gestion
 
 ## Cómo levantar el proyecto
 
-### Opción 1: Docker Compose (recomendado)
+### Opción 1: Docker Compose (todo incluido)
 
-El proyecto incluye Docker y Docker Compose para levantar tanto la aplicación como la base de datos PostgreSQL.
+Esta opción levanta en un solo comando tanto la aplicación como la base de datos PostgreSQL y Kafka.
 
 **Requisitos previos:**
 - Docker
@@ -30,7 +30,7 @@ El proyecto incluye Docker y Docker Compose para levantar tanto la aplicación c
    cd nauta-challenge
    ```
 
-2. Levanta los contenedores:
+2. Levanta todos los servicios con Docker Compose:
    ```bash
    docker-compose up -d
    ```
@@ -47,20 +47,61 @@ El proyecto incluye Docker y Docker Compose para levantar tanto la aplicación c
    docker-compose down
    ```
 
-### Opción 2: Ejecución local
+### Opción 2: Kafka separado + Aplicación
+
+Esta opción permite ejecutar Kafka en contenedores Docker mientras que la aplicación se ejecuta localmente.
+
+**Requisitos previos:**
+- Docker
+- Docker Compose
+- JDK 17
+- Gradle
+
+**Pasos:**
+
+1. Levanta Kafka y PostgreSQL con Docker Compose específico para infraestructura:
+   ```bash
+   docker-compose -f kafka-docker-compose.yml up -d
+   ```
+
+2. Ejecuta la aplicación localmente:
+   ```bash
+   ./gradlew bootRun
+   ```
+
+3. Para detener los servicios de infraestructura:
+   ```bash
+   docker-compose -f kafka-docker-compose.yml down
+   ```
+
+### Opción 3: Ejecución completamente local
 
 **Requisitos previos:**
 - JDK 17
 - Gradle
 - PostgreSQL
+- Kafka
 
 **Pasos:**
 
 1. Configura tu base de datos PostgreSQL local y ejecuta el script `schema.sql` ubicado en `src/main/resources/`.
 
-2. Actualiza las configuraciones de conexión en `application.properties` si es necesario.
+2. Configura y ejecuta Kafka localmente siguiendo las [instrucciones oficiales](https://kafka.apache.org/quickstart).
 
-3. Ejecuta el proyecto:
+3. Actualiza las configuraciones de conexión en `application.properties` si es necesario:
+   ```properties
+   # Configuración de PostgreSQL
+   spring.r2dbc.url=r2dbc:postgresql://localhost:5432/nautadb
+   spring.r2dbc.username=postgres
+   spring.r2dbc.password=postgres
+   
+   # Configuración de Kafka
+   spring.kafka.bootstrap-servers=localhost:9092
+   spring.kafka.failed-bookings.topic=failed-bookings
+   spring.kafka.failed-bookings.group=failed-bookings-group
+   ```
+
+4. Ejecuta el proyecto:
    ```bash
    ./gradlew bootRun
    ```
