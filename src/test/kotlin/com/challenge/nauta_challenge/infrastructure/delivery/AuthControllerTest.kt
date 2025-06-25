@@ -10,6 +10,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpStatus
 import kotlin.test.assertEquals
 
 @SpringBootTest
@@ -37,7 +38,7 @@ class AuthControllerTest {
         val result = authController.register(request)
 
         // Assert
-        assertEquals(200, result.statusCodeValue)
+        assertEquals(HttpStatus.OK, result.statusCode)
         assertEquals(expectedResponse, result.body)
     }
 
@@ -60,7 +61,7 @@ class AuthControllerTest {
         val result = authController.login(request)
 
         // Assert
-        assertEquals(200, result.statusCodeValue)
+        assertEquals(HttpStatus.OK, result.statusCode)
         assertEquals(expectedResponse, result.body)
     }
 }

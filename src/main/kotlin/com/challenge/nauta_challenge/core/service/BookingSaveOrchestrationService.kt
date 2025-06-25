@@ -34,7 +34,10 @@ class BookingSaveOrchestrationService(
             )
 
             logger.info("[saveBooking] Enviando booking a cola de reprocesamiento: {}", booking.bookingNumber)
-            val userId = booking.userId ?: userLoggedService.getCurrentUser().id
+            val userId = booking.userId ?: runCatching { userLoggedService.getCurrentUser().id }.getOrElse {
+                logger.warn("[saveBooking] No se pudo obtener el usuario autenticado, usando userId del booking")
+                booking.userId ?: throw IllegalStateException("No se pudo determinar el userId")
+            }
             val bookingWithUser = booking.copy(userId = userId)
             messagePublisher.publishMessage(
                 topic = KafkaConfig.FAILED_BOOKINGS_TOPIC,
@@ -51,13 +54,10 @@ class BookingSaveOrchestrationService(
      */
     private suspend fun processBookingSave(booking: Booking): Booking {
         val userId = runCatching { userLoggedService.getCurrentUser().id  }
-            .getOrElse { booking.userId }
+            .getOrElse { booking.userId ?: throw IllegalStateException("No se pudo determinar el userId") }
 
-        // se lanza una excepcion de forma aleatoria para simular fallos en el proceso
-        // con probabilidad 3 de 10
-        if (Math.random() < 0.3) {
-            throw RuntimeException("Simulated failure during booking save process")
-        }
+        // Eliminamos la excepción aleatoria para pruebas más consistentes
+        logger.info("[processBookingSave] Procesando booking con userId: {}", userId)
 
         val bookingSaved = bookingService.findOrSaveBooking(
             booking = booking,

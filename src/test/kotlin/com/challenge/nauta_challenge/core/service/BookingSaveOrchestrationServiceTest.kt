@@ -1,6 +1,8 @@
 package com.challenge.nauta_challenge.core.service
 
+import com.challenge.nauta_challenge.core.exception.BookingDeferredException
 import com.challenge.nauta_challenge.core.objects.AssetUtilsTestObject
+import com.challenge.nauta_challenge.core.repository.MessagePublisherRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -18,13 +20,15 @@ class BookingSaveOrchestrationServiceTest() {
     private val containerService = mockk<ContainerService>()
     private val orderService = mockk<OrderService>()
     private val associationService = mockk<OrderContainerAssociationService>()
+    private val messagePublisher = mockk<MessagePublisherRepository>(relaxed = true)
 
     private val bookingSaveOrchestrationService = BookingSaveOrchestrationService(
         bookingService,
         userLoggedService,
         containerService,
         orderService,
-        associationService
+        associationService,
+        messagePublisher
     )
 
     @Test
@@ -97,44 +101,39 @@ class BookingSaveOrchestrationServiceTest() {
     }
 
     @Test
-    fun `propaga excepción cuando getCurrentUser falla`() = runTest {
+    fun propagaExcepcionCuandoGetCurrentUserFalla() = runTest {
         // Arrange
         val booking = AssetUtilsTestObject.getBookingWithoutId()
 
-        coEvery {
-            userLoggedService.getCurrentUser()
-        } throws Exception("Usuario no autenticado")
+        coEvery { userLoggedService.getCurrentUser() } throws Exception("Usuario no autenticado")
 
         // Act & Assert
-        val exception = assertFailsWith<Exception> {
+        val exception = assertFailsWith<BookingDeferredException> {
             bookingSaveOrchestrationService.saveBooking(booking)
         }
 
-        assertEquals("Usuario no autenticado", exception.message)
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
     }
 
     @Test
-    fun `propaga excepción cuando findOrSaveBooking falla`() = runTest {
+    fun propagaExcepcionCuandoFindOrSaveBookingFalla() = runTest {
         // Arrange
         val booking = AssetUtilsTestObject.getBookingWithoutId()
         val userLogged = AssetUtilsTestObject.getUser()
 
         coEvery { userLoggedService.getCurrentUser() } returns userLogged
-
-        coEvery {
-            bookingService.findOrSaveBooking(booking, userLogged.id!!)
-        } throws Exception("Error al guardar booking")
+        coEvery { bookingService.findOrSaveBooking(booking, userLogged.id!!) } throws Exception("Error al guardar booking")
 
         // Act & Assert
-        val exception = assertFailsWith<Exception> {
+        val exception = assertFailsWith<BookingDeferredException> {
             bookingSaveOrchestrationService.saveBooking(booking)
         }
 
-        assertEquals("Error al guardar booking", exception.message)
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
     }
 
     @Test
-    fun `propaga excepción cuando saveContainersForBooking falla`() = runTest {
+    fun propagaExcepcionCuandoSaveContainersForBookingFalla() = runTest {
         // Arrange
         val booking = AssetUtilsTestObject.getBookingWithoutId()
         val userLogged = AssetUtilsTestObject.getUser()
@@ -142,21 +141,18 @@ class BookingSaveOrchestrationServiceTest() {
 
         coEvery { userLoggedService.getCurrentUser() } returns userLogged
         coEvery { bookingService.findOrSaveBooking(booking, userLogged.id!!) } returns booking.copy(id = bookingId)
-
-        coEvery {
-            containerService.saveContainersForBooking(booking.containers, bookingId)
-        } throws Exception("Error al guardar contenedores")
+        coEvery { containerService.saveContainersForBooking(booking.containers, bookingId) } throws Exception("Error al guardar contenedores")
 
         // Act & Assert
-        val exception = assertFailsWith<Exception> {
+        val exception = assertFailsWith<BookingDeferredException> {
             bookingSaveOrchestrationService.saveBooking(booking)
         }
 
-        assertEquals("Error al guardar contenedores", exception.message)
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
     }
 
     @Test
-    fun `propaga excepción cuando saveOrdersForBooking falla`() = runTest {
+    fun propagaExcepcionCuandoSaveOrdersForBookingFalla() = runTest {
         // Arrange
         val booking = AssetUtilsTestObject.getBookingWithoutId()
         val userLogged = AssetUtilsTestObject.getUser()
@@ -166,21 +162,18 @@ class BookingSaveOrchestrationServiceTest() {
         coEvery { userLoggedService.getCurrentUser() } returns userLogged
         coEvery { bookingService.findOrSaveBooking(booking, userLogged.id!!) } returns booking.copy(id = bookingId)
         coEvery { containerService.saveContainersForBooking(booking.containers, bookingId) } returns containersOutput
-
-        coEvery {
-            orderService.saveOrdersForBooking(booking.orders, bookingId)
-        } throws Exception("Error al guardar órdenes")
+        coEvery { orderService.saveOrdersForBooking(booking.orders, bookingId) } throws Exception("Error al guardar órdenes")
 
         // Act & Assert
-        val exception = assertFailsWith<Exception> {
+        val exception = assertFailsWith<BookingDeferredException> {
             bookingSaveOrchestrationService.saveBooking(booking)
         }
 
-        assertEquals("Error al guardar órdenes", exception.message)
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
     }
 
     @Test
-    fun `propaga excepción cuando createAssociations falla`() = runTest {
+    fun propagaExcepcionCuandoCreateAssociationsFalla() = runTest {
         // Arrange
         val booking = AssetUtilsTestObject.getBookingWithoutId()
         val userLogged = AssetUtilsTestObject.getUser()
@@ -193,16 +186,64 @@ class BookingSaveOrchestrationServiceTest() {
         coEvery { bookingService.findOrSaveBooking(booking, userLogged.id!!) } returns booking.copy(id = bookingId)
         coEvery { containerService.saveContainersForBooking(booking.containers, bookingId) } returns containersOutput
         coEvery { orderService.saveOrdersForBooking(booking.orders, bookingId) } returns ordersOutput
-
-        coEvery {
-            associationService.createAssociations(ordersOutput, containersOutput, booking.bookingNumber)
-        } throws Exception("Error al crear asociaciones")
+        coEvery { associationService.createAssociations(ordersOutput, containersOutput, booking.bookingNumber) } throws Exception("Error al crear asociaciones")
 
         // Act & Assert
-        val exception = assertFailsWith<Exception> {
+        val exception = assertFailsWith<BookingDeferredException> {
             bookingSaveOrchestrationService.saveBooking(booking)
         }
 
-        assertEquals("Error al crear asociaciones", exception.message)
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
+    }
+
+    @Test
+    fun `usa booking userId si getCurrentUser falla`() = runTest {
+        // Arrange
+        val booking = AssetUtilsTestObject.getBookingWithoutId().copy(userId = 99)
+        coEvery { userLoggedService.getCurrentUser() } throws Exception("Fallo auth")
+        coEvery { bookingService.findOrSaveBooking(booking, 99) } returns booking.copy(id = 1)
+        coEvery { containerService.saveContainersForBooking(any(), any()) } returns emptyList()
+        coEvery { orderService.saveOrdersForBooking(any(), any()) } returns emptyList()
+        coEvery { associationService.createAssociations(any(), any(), any()) } returns Unit
+
+        // Act
+        val bookingSaved = bookingSaveOrchestrationService.saveBooking(booking)
+
+        // Assert
+        assertEquals(1, bookingSaved.id)
+        assertEquals(99, bookingSaved.userId)
+    }
+
+    @Test
+    fun publicaEnMessagePublisherSiOcurreExcepcionYPropagaBookingDeferredException() = runTest {
+        // Arrange
+        val booking = AssetUtilsTestObject.getBookingWithoutId().copy(userId = 77)
+        coEvery { userLoggedService.getCurrentUser() } returns AssetUtilsTestObject.getUser()
+        coEvery { bookingService.findOrSaveBooking(any(), any()) } throws RuntimeException("fallo DB")
+        coEvery { messagePublisher.publishMessage(any(), any()) } returns Unit
+
+        // Act & Assert
+        val exception = assertFailsWith<BookingDeferredException> {
+            bookingSaveOrchestrationService.saveBooking(booking)
+        }
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
+        io.mockk.coVerify { messagePublisher.publishMessage(any(), any()) }
+    }
+
+    @Test
+    fun propagaExcepcionCuandoSimulatedFailureOcurre() = runTest {
+        // Arrange
+        val booking = AssetUtilsTestObject.getBookingWithoutId()
+        val userLogged = AssetUtilsTestObject.getUser()
+
+        coEvery { userLoggedService.getCurrentUser() } returns userLogged
+        coEvery { bookingService.findOrSaveBooking(any(), any()) } throws RuntimeException("Simulated failure during booking save process")
+
+        // Act & Assert
+        val exception = assertFailsWith<BookingDeferredException> {
+            bookingSaveOrchestrationService.saveBooking(booking)
+        }
+
+        assertEquals("El booking ${booking.bookingNumber} no pudo ser procesado en este momento y será reprocesado automáticamente.", exception.message)
     }
 }

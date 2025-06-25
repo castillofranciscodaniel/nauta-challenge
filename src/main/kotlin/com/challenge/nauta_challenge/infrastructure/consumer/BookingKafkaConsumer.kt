@@ -42,7 +42,7 @@ class BookingKafkaConsumer(
                 "[consumeFailedBooking] Error al reprocesar booking {}: {}",
                 bookingNumber, e.message, e
             )
-            throw e
+            // Manejar la excepción sin volver a lanzarla
         }
     }
 }

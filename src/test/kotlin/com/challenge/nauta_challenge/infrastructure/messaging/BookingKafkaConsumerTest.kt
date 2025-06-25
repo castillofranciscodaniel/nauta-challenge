@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 class BookingKafkaConsumerTest {
@@ -26,5 +27,15 @@ class BookingKafkaConsumerTest {
 
         coVerify { bookingSaveOrchestrationService.retryBookingSave(booking) }
     }
-}
 
+    @Test
+    fun `consumeFailedBooking maneja excepcion correctamente`() = runTest {
+        val booking = Booking(bookingNumber = "B1", userId = 1, containers = emptyList(), orders = emptyList())
+        coEvery { bookingSaveOrchestrationService.retryBookingSave(booking) } throws Exception("Simulated exception")
+
+        consumer.consumeFailedBooking(booking)
+
+        // No se lanza excepción, lo que indica que el catch manejó el error correctamente
+        coVerify(exactly = 1) { bookingSaveOrchestrationService.retryBookingSave(booking) }
+    }
+}
