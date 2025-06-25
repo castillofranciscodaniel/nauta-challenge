@@ -93,5 +93,4 @@ volumes:
 networks:
   nauta-network:
   kafka-network:
-    name: kafka-network
-    external: true
+    driver: bridge

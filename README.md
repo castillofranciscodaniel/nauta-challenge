@@ -59,7 +59,7 @@ Esta opción permite ejecutar Kafka en contenedores Docker mientras que la aplic
 
 **Pasos:**
 
-1. Levanta Kafka y PostgreSQL con Docker Compose específico para infraestructura:
+1. Levanta Kafka con Docker Compose específico para infraestructura:
    ```bash
    docker-compose -f kafka-docker-compose.yml up -d
    ```
@@ -192,11 +192,44 @@ curl -X GET http://localhost:8080/api/containers/{containerId}/orders \
 
 ## Estructura del proyecto
 
-El proyecto sigue una arquitectura hexagonal con:
+La estructura del proyecto sigue principios de arquitectura limpia (hexagonal) y está organizada de la siguiente manera:
 
-- **Core**: Modelos de dominio y lógica de negocio
-- **Adapters**: Implementaciones concretas de los repositorios
-- **Infrastructure**: Controladores REST, seguridad y configuraciones
+```
+├── build.gradle.kts                # Configuración de Gradle para el proyecto
+├── docker-compose.yml              # Orquestación de servicios (app, base de datos, Kafka, etc.)
+├── kafka-docker-compose.yml        # Orquestación alternativa solo para Kafka y dependencias
+├── Dockerfile                      # Imagen Docker de la aplicación
+├── src/
+│   ├── main/
+│   │   ├── kotlin/                 # Código fuente principal en Kotlin
+│   │   │   └── com/
+│   │   │       └── challenge/
+│   │   │           └── nauta_challenge/
+│   │   │               ├── core/           # Lógica de dominio, puertos y modelos
+│   │   │               ├── infrastructure/  # Adaptadores, controladores, config, mensajería, advice
+│   │   │               └── ...
+│   │   └── resources/              # Archivos de configuración y recursos estáticos
+│   │       ├── application.properties
+│   │       ├── schema.sql
+│   │       └── ...
+│   └── test/
+│       ├── kotlin/                 # Pruebas unitarias y de integración
+│       └── resources/              # Configuración específica para tests
+├── build/                          # Archivos generados por la compilación y ejecución
+├── run-coverage.sh                 # Script para generar y abrir el reporte de cobertura
+└── README.md                       # Este archivo
+```
+
+### Detalle de carpetas principales
+
+- **adapters/**: Contiene los adaptadores de BD, clientes HTTP (si hubiera), sender Kafka y cualquier otro adaptador necesario para la comunicación con tecnologías externas. Estos adaptadores implementan los puertos definidos en el núcleo del proyecto.
+- **core/**: Lógica de negocio, modelos de dominio, puertos (interfaces) y excepciones personalizadas. Aquí no hay dependencias de frameworks externos.
+- **infrastructure/**: Incluye controladores REST, configuración de Spring, advice global de excepciones y cualquier integración transversal o de infraestructura general (seguridad, configuración, etc). 
+- **resources/**: Archivos de configuración (`application.properties`), scripts de base de datos (`schema.sql`), y otros recursos estáticos.
+- **test/**: Pruebas unitarias y de integración, junto con configuraciones específicas para el entorno de test.
+- **build/**: Carpeta generada automáticamente por Gradle, contiene los resultados de la compilación, reportes y archivos temporales.
+
+Esta organización facilita la mantenibilidad, escalabilidad y testabilidad del proyecto, siguiendo buenas prácticas de separación de responsabilidades y arquitectura limpia.
 
 ## Testing y cobertura de código
 
@@ -261,3 +294,21 @@ private suspend fun processBookingSave(booking: Booking): Booking {
 - El método también obtiene el `userId` del usuario logueado si está disponible; si no, utiliza el `userId` incluido en el propio objeto `Booking` (útil para reprocesos asíncronos desde Kafka, donde no hay contexto de usuario).
 
 Esta lógica es útil para validar que el sistema maneja correctamente los errores y reprocesa los mensajes fallidos, asegurando la robustez de la solución ante fallos inesperados.
+
+### Visualización de mensajes con Kafka UI (interfaz web)
+
+El proyecto incluye el servicio `kafka-ui` en el `docker-compose.yml`, que te permite visualizar y explorar los mensajes de Kafka desde una interfaz web muy sencilla.
+
+- Una vez que levantes los servicios con Docker Compose, accede a la UI en:
+
+  [http://localhost:8081](http://localhost:8081)
+
+- Desde allí podrás:
+  - Navegar los topics (incluyendo la DLQ si la configuras)
+  - **Ver los mensajes de cada topic** (por ejemplo, los mensajes del topic `failed-bookings` en:
+    [http://localhost:8081/ui/clusters/local/all-topics/failed-bookings/messages](http://localhost:8081/ui/clusters/local/all-topics/failed-bookings/messages?keySerde=String&valueSerde=String&limit=100))
+  - Ver particiones y offsets
+  - Buscar y filtrar mensajes
+  - Ver el estado del clúster y los consumidores
+
+Esta herramienta es muy útil para depuración y monitoreo durante el desarrollo.
